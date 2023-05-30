@@ -1,3 +1,5 @@
+[![Docker](https://github.com/jdmartin/wheregoes/actions/workflows/docker_build.yml/badge.svg)](https://github.com/jdmartin/wheregoes/actions/workflows/docker_build.yml)
+
 # wheregoes
 A Go implementation of a URL tracer.
 
