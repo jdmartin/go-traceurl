@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>URL Tracer - Result</title>
+    <link rel="stylesheet" href="/static/css/wheregoes.css">
+</head>
+<body>
+    <div id="resultsDiv">
+	<h2>Hops your link traversed:</h2>
+	<ol>
+		{{range $i, $hop := .Hops}}
+			{{if eq $i $.LastIndex}}
+				<li><strong>Desintation:</strong> <a href="{{.URL}}" target="_blank">{{.URL}}</a></li>
+			{{else}}
+				<li>{{.URL}}</li>
+			{{end}}
+		{{end}}
+	</ol>
+	<p><button class="button-3" role="button"><a href="/">Trace another URL</a></button></p>
+</div>
+</body>
+</html>
