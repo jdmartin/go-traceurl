@@ -1,7 +1,7 @@
 /* CSS */
 
 h2 {
-  margin-left: 3%;
+  margin-left: 0.5%;
 }
 
 ol {
@@ -104,4 +104,104 @@ li {
 #resultsDiv {
   background-color: antiquewhite;
   height: 100vh;
+  padding-left: 5%;
+  padding-right: 5%;
+}
+
+#removed-params {
+  margin-left: 3%;
+}
+
+.removed-params {
+  margin-left: 3%;
+}
+
+#final-hop, .hop-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 10px;
+  padding-bottom: 15px;
+  align-items: first baseline;
+}
+
+.header-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-top: 3px;
+  padding-bottom: 5px;
+  align-items: first baseline;
+}
+
+.hop-number {
+  display: flex;
+  font-weight: bold;
+  flex-basis: 7%;
+  justify-content: flex-start;
+}
+
+.status-code-header {
+  display: flex;
+  flex-basis: 8%;
+  justify-content: flex-start;
+}
+
+.status-code {
+  display: flex;
+  border-radius: 5px;
+  font-size: 14px;
+  color: #fff;
+  flex-basis: 8%;
+  justify-content: flex-start;
+}
+
+#status-button {
+  width: 40%;
+  display: inline-block;
+  border-radius: 5px;
+  text-align: center;
+  padding: 10px 10px 10px 10px;
+}
+
+.status-code-2xx { background-color: #28a745; }
+.status-code-3xx { background-color: #007bff; }
+.status-code-4xx { background-color: #dc3545; }
+.status-code-5xx { background-color: #ffc107; }
+
+.url-header {
+  display: flex;
+  flex-basis: 85%;
+  justify-content: flex-start;
+}
+
+.url {
+  display: flex;
+  flex-basis: 85%;
+  justify-content: flex-start;
+  align-self: self-end;
+}
+
+#resultsHeader,
+#another {
+  display: inline-block;
+  vertical-align: middle;
+}
+
+#title {
+  width: 30%;
+  text-align: left;
+  vertical-align: middle;
+  display: inline-block;
+}
+
+#resultsHeader {
+  width: 80%; /* Adjust the width as needed */
+}
+
+#another {
+  width: auto; /* Adjust the width as needed */
+  text-align: center;
+  vertical-align: middle;
+  display: inline-block;
 }

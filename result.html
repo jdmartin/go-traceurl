@@ -1,22 +1,45 @@
 <!DOCTYPE html>
 <html>
+
 <head>
-	<title>Go URL Tracer - Result</title>
-    <link rel="stylesheet" href="/static/css/wheregoes.css">
+	<title>URL Tracer - Result</title>
+	<link rel="stylesheet" href="/static/css/wheregoes.css">
+	<script src="./static/js/cleanUrls.js"></script>
 </head>
 <body>
     <div id="resultsDiv">
-	<h2>Hops your link traversed:</h2>
-	<ol>
-		{{range $i, $hop := .Hops}}
-			{{if eq $i $.LastIndex}}
-				<li><strong>Desintation:</strong> <a href="{{.URL}}" target="_blank">{{.URL}}</a></li>
-			{{else}}
-				<li>{{.URL}}</li>
-			{{end}}
-		{{end}}
-	</ol>
-	<p><button class="button-3" role="button"><a href="/">Trace another URL</a></button></p>
-</div>
+		<div id="resultsHeader">
+			<div id="title">
+				<h2>Hops your link traversed:</h2>
+			</div>
+			<div id="another">
+				<button class="button-3" role="button"><a href="/">Trace another URL</a></button>
+			</div>
+		</div>
+		<hr>
+        <div>
+			<div class="header-row" style="border-bottom: none; margin-bottom: 5px;">
+				<span class="hop-number"><strong><h3>Hop</h3></strong></span>
+				<span class="status-code-header"><strong><h3>Status</h3></strong></span>
+				<span class="url-header"><strong>URL</strong></span>
+			</div>
+			<hr>
+            {{range $i, $hop := .Hops}}
+                <div class="hop-row">
+                    <span class="hop-number">{{$hop.Number}}:</span>
+                    <span class="status-code"><span id="status-button" class="status-code-{{$hop.StatusCodeClass}}">{{$hop.StatusCode}}</span></span>
+					{{if eq $i $.LastIndex}}
+						<span class="url" id="final-hop"><a href="{{.URL}}" target="_blank">{{.URL}}</a></span>
+						<br>
+					{{else}}
+					<span class="url"><span class="inert-link">{{.URL}}</span></span>
+					{{end}}
+                </div>
+            {{end}}
+        </div>
+		<hr>
+		<p>Parameters Removed from Destination URL: <span id="removed-params"></span></p>
+        <p></p>
+    </div>
 </body>
 </html>

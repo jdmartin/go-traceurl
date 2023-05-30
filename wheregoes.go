@@ -13,14 +13,17 @@ var (
 )
 
 type Hop struct {
-	Number int
-	URL    string
+	Number          int
+	URL             string
+	StatusCode      int
+	StatusCodeClass string
 }
 
 type ResultData struct {
 	RedirectURL string
 	Hops        []Hop
 	LastIndex   int
+	StatusCode  int
 }
 
 func main() {
@@ -67,8 +70,6 @@ func traceHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Hop and followRedirects functions remain the same as before...
-
 func followRedirects(url string) (string, []Hop, error) {
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -91,9 +92,11 @@ func followRedirects(url string) (string, []Hop, error) {
 		defer resp.Body.Close()
 
 		hop := Hop{
-			Number: number,
-			URL:    url,
+			Number:     number,
+			URL:        url,
+			StatusCode: resp.StatusCode,
 		}
+		hop.StatusCodeClass = getStatusCodeClass(resp.StatusCode)
 		hops = append(hops, hop)
 
 		if resp.StatusCode >= 300 && resp.StatusCode <= 399 {
@@ -116,4 +119,19 @@ func staticHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Set the Content-Type header to "text/css"
 	w.Header().Set("Content-Type", "text/css")
+}
+
+func getStatusCodeClass(statusCode int) string {
+	switch {
+	case statusCode >= 200 && statusCode < 300:
+		return "2xx"
+	case statusCode >= 300 && statusCode < 400:
+		return "3xx"
+	case statusCode >= 400 && statusCode < 500:
+		return "4xx"
+	case statusCode >= 500 && statusCode < 600:
+		return "5xx"
+	default:
+		return ""
+	}
 }
