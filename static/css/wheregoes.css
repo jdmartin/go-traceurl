@@ -119,7 +119,6 @@ li {
 #final-hop, .hop-row {
   display: flex;
   align-items: center;
-  gap: 10px;
   padding-top: 10px;
   padding-bottom: 15px;
   align-items: first baseline;
@@ -132,6 +131,7 @@ li {
   padding-top: 3px;
   padding-bottom: 5px;
   align-items: first baseline;
+  justify-content: space-between;
 }
 
 .hop-number {
@@ -139,12 +139,14 @@ li {
   font-weight: bold;
   flex-basis: 7%;
   justify-content: flex-start;
+  margin-right: 20px;
 }
 
 .status-code-header {
   display: flex;
   flex-basis: 8%;
   justify-content: flex-start;
+  margin-right: 20px;
 }
 
 .status-code {
@@ -154,6 +156,7 @@ li {
   color: #fff;
   flex-basis: 8%;
   justify-content: flex-start;
+  margin-right: 20px;
 }
 
 #status-button {
@@ -180,6 +183,9 @@ li {
   flex-basis: 85%;
   justify-content: flex-start;
   align-self: self-end;
+  overflow-wrap: break-word;
+  word-break: break-all;
+  margin-right: 20px;
 }
 
 #resultsHeader,
