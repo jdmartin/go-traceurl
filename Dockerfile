@@ -1,6 +1,6 @@
 FROM golang:1.20.4-alpine3.18
 
-#Build 30 May 2023
+#Build 30 May '23
 
 RUN mkdir /app
 
