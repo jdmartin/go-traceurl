@@ -57,18 +57,16 @@ body {
 
 .button-85:before {
   content: "";
-  background: linear-gradient(
-    45deg,
-    #ff0000,
-    #ff7300,
-    #fffb00,
-    #48ff00,
-    #00ffd5,
-    #002bff,
-    #7a00ff,
-    #ff00c8,
-    #ff0000
-  );
+  background: linear-gradient(45deg,
+      #ff0000,
+      #ff7300,
+      #fffb00,
+      #48ff00,
+      #00ffd5,
+      #002bff,
+      #7a00ff,
+      #ff00c8,
+      #ff0000);
   position: absolute;
   top: -2px;
   left: -2px;
@@ -87,9 +85,11 @@ body {
   0% {
     background-position: 0 0;
   }
+
   50% {
     background-position: 400% 0;
   }
+
   100% {
     background-position: 0 0;
   }
@@ -186,7 +186,8 @@ li {
   margin-left: 3%;
 }
 
-#final-hop, .hop-row {
+#final-hop,
+.hop-row {
   display: flex;
   align-items: center;
   padding-top: 10px;
@@ -236,10 +237,21 @@ li {
   padding: 10px 10px 10px 10px;
 }
 
-.status-code-2xx { background-color: #28a745; }
-.status-code-3xx { background-color: #007bff; }
-.status-code-4xx { background-color: #dc3545; }
-.status-code-5xx { background-color: #ffc107; }
+.status-code-2xx {
+  background-color: #28a745;
+}
+
+.status-code-3xx {
+  background-color: #007bff;
+}
+
+.status-code-4xx {
+  background-color: #dc3545;
+}
+
+.status-code-5xx {
+  background-color: #ffc107;
+}
 
 .url-header {
   display: flex;
@@ -265,13 +277,15 @@ li {
 }
 
 #resultsHeader {
-  width: 80%; /* Adjust the width as needed */
+  width: 80%;
+  /* Adjust the width as needed */
   display: inline-block;
   vertical-align: middle;
 }
 
 #another {
-  width: auto; /* Adjust the width as needed */
+  width: auto;
+  /* Adjust the width as needed */
   text-align: center;
   vertical-align: middle;
   display: inline-block;
@@ -301,4 +315,3 @@ li {
 .tooltip-container:hover .tooltip {
   visibility: visible;
 }
-
