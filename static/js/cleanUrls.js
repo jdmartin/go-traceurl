@@ -1,53 +1,78 @@
-window.addEventListener("DOMContentLoaded", (event) => {
+window.addEventListener("DOMContentLoaded", () => {
     const finalHop = document.querySelector("#final-hop");
     const removedParamsSpan = document.querySelector("#removed-params");
 
-    // Extract the URL from the final hop and remove UTM parameters
-    const url = finalHop.querySelector("a").href;
-    const urlWithoutUTM = removeTrackingParameters(url);
+    // Extract the URL from the final hop
+    const url = finalHop.querySelector("a").textContent;
+    const lastSlashIndex = url.lastIndexOf("/");
+    const baseUrl = url.substring(0, lastSlashIndex + 1);
+    const removedParams = [];
 
-    // Update the href and text of the final hop with the modified URL
-    finalHop.querySelector("a").href = urlWithoutUTM;
-    finalHop.querySelector("a").textContent = urlWithoutUTM;
+    function extractParameters(url) {
+        let goodParams = "";
 
-    function removeTrackingParameters(url) {
-        const u = new URL(url);
-        const params = u.searchParams;
-        const trackingParams = [];
-        const removedParams = [];
+        // Split the URL on the last slash
+        const lastSlashIndex = url.lastIndexOf("/") + 1;
+        const path = url.substring(lastSlashIndex);
 
-        params.forEach((value, key) => {
-            if (
-                key.startsWith("utm_") ||
-                key === "cmpid" ||
-                key === "cid" ||
-                key === "fbclid" ||
-                key === "gclid" ||
-                key === "msclkid" ||
-                key === "mc_cid" ||
-                key === "mc_eid" ||
-                key.startsWith("pk_")
-            ) {
-                trackingParams.push(key);
+        // Split the path into segments
+        const segments = path.split(/[?&]/);
+
+        // Iterate over the segments
+        for (const segment of segments) {
+            // Split the segment on the equals sign
+            const [key, value] = segment.split("=");
+
+            if (key && value) {
+                if (filterTheParams(key)) {
+                    goodParams += `&${key}=${value}`;
+                }
             }
-        });
-
-        trackingParams.forEach((param) => {
-            params.delete(param);
-            removedParams.push(param);
-        });
-
-        if (params.toString() === trackingParams.join("&")) {
-            // If the query string only contained tracking parameters, remove the entire query string
-            u.search = "";
         }
 
-        // Sort, then Populate the span with the comma-separated list of removed parameters
-        if (removedParams.length > 0) {
-            removedParams.sort();
-            removedParamsSpan.textContent = removedParams.join(", ");
+        let fixedGoodParams = "";
+        // Let's just make sure the first character in goodParams is a ?
+        if (goodParams.slice(1).length > 0) {
+            fixedGoodParams = "?" + goodParams.slice(1);
         }
 
-        return u.toString();
+        return fixedGoodParams;
     }
+
+    function filterTheParams(param) {
+        // List of known bad parts to discard
+        const badParts = [
+            "cid",
+            "cmpid",
+            "fbclid",
+            "gclid",
+            "msclkid",
+            "mc_cid",
+            "mc_eid",
+        ];
+
+        const isBadPart =
+            badParts.includes(param) ||
+            param.startsWith("pk_") ||
+            param.startsWith("utm_");
+        if (isBadPart) {
+            removedParams.push(param);
+            return false;
+        }
+        return true;
+    }
+
+    let goodParamString = extractParameters(url);
+
+    // Sort the removedParams list
+    removedParams.sort();
+
+    // Update the removedParamsSpan if necessary
+    if (removedParams.length > 0) {
+        removedParamsSpan.textContent = removedParams.join(", ");
+    }
+
+    // Update the href and text content of the final hop with the modified URL
+    finalHop.querySelector("a").href = `${baseUrl}${goodParamString}`;
+    finalHop.querySelector("a").textContent = `${baseUrl}${goodParamString}`;
 });

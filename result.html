@@ -4,7 +4,8 @@
 <head>
 	<title>URL Tracer - Result</title>
 	<link rel="stylesheet" href="/static/css/wheregoes.css">
-	<script src="./static/js/cleanUrls.js"></script>
+	<script src="./static/js/cleanUrls.js" defer></script>
+	<!--<script src="./static/js/updateStatuses.js" defer></script> -->
 </head>
 
 <body>
@@ -26,8 +27,12 @@
 			{{range $i, $hop := .Hops}}
 			<div class="hop-row">
 				<span class="hop-number">{{$hop.Number}}:</span>
-				<span class="status-code"><span id="status-button"
-						class="status-code-{{$hop.StatusCodeClass}}">{{$hop.StatusCode}}</span></span>
+				<span class="tooltip-container">
+					<span class="status-code">
+						<span id="status-button" class="status-code-{{$hop.StatusCodeClass}}">{{$hop.StatusCode}}</span>
+						<span class="tooltip"></span>
+					</span>
+				</span>
 				{{if eq $i $.LastIndex}}
 				<span class="url" id="final-hop"><a href="{{.URL}}" target="_blank">{{.URL}}</a></span>
 				<br>
@@ -37,10 +42,9 @@
 			</div>
 			{{end}}
 			<hr>
-		<p>Parameters Removed from Destination URL: <span id="removed-params"></span></p>
+			<p><span>Parameters Removed from Destination URL: <span id="removed-params"></span></span></p>
 		<p></p>
 		</div>
-		
 	</div>
 </body>
 
