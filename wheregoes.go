@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"net/http"
 	"net/url"
+	"os"
 	"strings"
 )
 
@@ -29,6 +30,11 @@ type ResultData struct {
 }
 
 func main() {
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
 	formTemplate = template.Must(template.ParseFiles("static/form.html"))
 	resultTemplate = template.Must(template.ParseFiles("static/result.html"))
 
@@ -38,8 +44,9 @@ func main() {
 	http.HandleFunc("/static/js/", jsHandler)
 	http.HandleFunc("/static/data/", dataHandler)
 
-	fmt.Println("Server listening on http://localhost:8080")
-	http.ListenAndServe(":8080", nil)
+	addr := fmt.Sprintf(":%s", port)
+	fmt.Printf("Server listening on http://localhost%s\n", addr)
+	http.ListenAndServe(addr, nil)
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
