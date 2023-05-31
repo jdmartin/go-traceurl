@@ -5,7 +5,7 @@ A Go implementation of a URL tracer.
 
 ------
 
-🚨 I've been using Go for about five days. 🚨
+🚨 I've only been using Go since late May 2023. 🚨
 
 [wheregoes.com](https://wheregoes.com) remains a fine site that you should probably use instead.  
 
