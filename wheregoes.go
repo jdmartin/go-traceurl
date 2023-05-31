@@ -21,10 +21,11 @@ type Hop struct {
 }
 
 type ResultData struct {
-	RedirectURL string
-	Hops        []Hop
-	LastIndex   int
-	StatusCode  int
+	RedirectURL  string
+	Hops         []Hop
+	LastIndex    int
+	StatusCode   int
+	FinalMessage string
 }
 
 func main() {
@@ -85,10 +86,23 @@ func traceHandler(w http.ResponseWriter, r *http.Request) {
 
 		lastIndex := len(hops) - 1
 
+		var finalStatusCode int
+		var finalMessage string
+
+		if lastIndex >= 0 {
+			finalStatusCode = hops[lastIndex].StatusCode
+		} else {
+			finalStatusCode = http.StatusInternalServerError
+			finalMessage = "Redirect Location Not Provided By Headers"
+			hops = append(hops, Hop{Number: 1, URL: rawURL, StatusCode: finalStatusCode, StatusCodeClass: getStatusCodeClass(finalStatusCode)})
+		}
+
 		data := ResultData{
-			RedirectURL: redirectURL,
-			Hops:        hops,
-			LastIndex:   lastIndex,
+			RedirectURL:  redirectURL,
+			Hops:         hops,
+			LastIndex:    lastIndex,
+			StatusCode:   finalStatusCode,
+			FinalMessage: finalMessage,
 		}
 
 		resultTemplate.Execute(w, data)
@@ -140,7 +154,7 @@ func followRedirects(urlStr string) (string, []Hop, error) {
 			// Handle redirect
 			location := resp.Header.Get("Location")
 			if location == "" {
-				return "", nil, fmt.Errorf("redirect location not found")
+				return "", []Hop{}, nil // Return empty slice of Hop when redirect location is not found
 			}
 
 			redirectURL, err := handleRelativeRedirect(previousURL, location)

@@ -45,6 +45,9 @@
 			{{end}}
 		</div>
 		{{end}}
+		{{if ne .FinalMessage ""}}
+		<span class="final-message">🥷 Secret: {{.FinalMessage}}</span>
+		{{end}}
 		<hr>
 		<p><span>Parameters Removed from Destination URL: <span id="removed-params"></span></span></p>
 		<p></p>

@@ -2,79 +2,83 @@ window.addEventListener("DOMContentLoaded", () => {
     const finalHop = document.querySelector("#final-hop");
     const removedParamsSpan = document.querySelector("#removed-params");
 
-    // Extract the URL from the final hop
-    const url = finalHop.querySelector("a").textContent;
-    const lastSlashIndex = url.lastIndexOf("/");
-    const baseUrl = url.substring(0, lastSlashIndex + 1);
-    const removedParams = [];
+    if (finalHop) {
+        // Extract the URL from the final hop
+        const url = finalHop.querySelector("a").textContent;
+        const lastSlashIndex = url.lastIndexOf("/");
+        const baseUrl = url.substring(0, lastSlashIndex + 1);
+        const removedParams = [];
 
-    function extractParameters(url) {
-        let goodParams = "";
-        let additionalText = "";
+        function extractParameters(url) {
+            let goodParams = "";
+            let additionalText = "";
 
-        // Split the URL on the last slash
-        const lastSlashIndex = url.lastIndexOf("/") + 1;
-        const path = url.substring(lastSlashIndex);
+            // Split the URL on the last slash
+            const lastSlashIndex = url.lastIndexOf("/") + 1;
+            const path = url.substring(lastSlashIndex);
 
-        // Split the path into segments
-        const segments = path.split(/[?&]/);
+            // Split the path into segments
+            const segments = path.split(/[?&]/);
 
-        // Iterate over the segments
-        for (const segment of segments) {
-            // Split the segment on the equals sign
-            const [key, value] = segment.split("=");
+            // Iterate over the segments
+            for (const segment of segments) {
+                // Split the segment on the equals sign
+                const [key, value] = segment.split("=");
 
-            if (key && value) {
-                if (filterTheParams(key)) {
-                    goodParams += `&${key}=${value}`;
+                if (key && value) {
+                    if (filterTheParams(key)) {
+                        goodParams += `&${key}=${value}`;
+                    }
+                } else {
+                    additionalText += segment;
                 }
-            } else {
-                additionalText += segment;
             }
+
+            // Let's just make sure the first character in goodParams is a ?
+            if (goodParams.slice(1).length > 0) {
+                additionalText += "?" + goodParams.slice(1);
+            }
+
+            return additionalText;
         }
 
-        // Let's just make sure the first character in goodParams is a ?
-        if (goodParams.slice(1).length > 0) {
-            additionalText += "?" + goodParams.slice(1);
+        function filterTheParams(param) {
+            // List of known bad parts to discard
+            const badParts = [
+                "cid",
+                "cmpid",
+                "fbclid",
+                "gclid",
+                "msclkid",
+                "mc_cid",
+                "mc_eid",
+            ];
+
+            const isBadPart =
+                badParts.includes(param) ||
+                param.startsWith("pk_") ||
+                param.startsWith("utm_");
+            if (isBadPart) {
+                removedParams.push(param);
+                return false;
+            }
+            return true;
         }
 
-        return additionalText;
-    }
+        let goodParamString = extractParameters(url);
 
-    function filterTheParams(param) {
-        // List of known bad parts to discard
-        const badParts = [
-            "cid",
-            "cmpid",
-            "fbclid",
-            "gclid",
-            "msclkid",
-            "mc_cid",
-            "mc_eid",
-        ];
+        // Sort the removedParams list
+        removedParams.sort();
 
-        const isBadPart =
-            badParts.includes(param) ||
-            param.startsWith("pk_") ||
-            param.startsWith("utm_");
-        if (isBadPart) {
-            removedParams.push(param);
-            return false;
+        // Update the removedParamsSpan if necessary
+        if (removedParams.length > 0) {
+            removedParamsSpan.textContent = removedParams.join(", ");
         }
-        return true;
+
+        // Update the href and text content of the final hop with the modified URL
+        finalHop.querySelector("a").href = `${baseUrl}${goodParamString}`;
+        finalHop.querySelector(
+            "a"
+        ).textContent = `${baseUrl}${goodParamString}`;
     }
-
-    let goodParamString = extractParameters(url);
-
-    // Sort the removedParams list
-    removedParams.sort();
-
-    // Update the removedParamsSpan if necessary
-    if (removedParams.length > 0) {
-        removedParamsSpan.textContent = removedParams.join(", ");
-    }
-
-    // Update the href and text content of the final hop with the modified URL
-    finalHop.querySelector("a").href = `${baseUrl}${goodParamString}`;
-    finalHop.querySelector("a").textContent = `${baseUrl}${goodParamString}`;
 });
