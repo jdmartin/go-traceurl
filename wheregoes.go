@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -32,7 +33,9 @@ func main() {
 
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/trace", traceHandler)
-	http.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
+	http.HandleFunc("/static/css/", cssHandler)
+	http.HandleFunc("/static/js/", jsHandler)
+	http.HandleFunc("/data/", dataHandler)
 
 	fmt.Println("Server listening on http://localhost:8080")
 	http.ListenAndServe(":8080", nil)
@@ -46,11 +49,35 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func cssHandler(w http.ResponseWriter, r *http.Request) {
+	filePath := "static/css/" + strings.TrimPrefix(r.URL.Path, "/static/css/")
+	http.ServeFile(w, r, filePath)
+
+	// Set the Content-Type header to "text/css"
+	w.Header().Set("Content-Type", "text/css")
+}
+
+func jsHandler(w http.ResponseWriter, r *http.Request) {
+	filePath := "static/js/" + strings.TrimPrefix(r.URL.Path, "/static/js/")
+	http.ServeFile(w, r, filePath)
+
+	// Set the Content-Type header to "application/javascript"
+	w.Header().Set("Content-Type", "application/javascript")
+}
+
+func dataHandler(w http.ResponseWriter, r *http.Request) {
+	filePath := "data/" + strings.TrimPrefix(r.URL.Path, "/data/")
+	http.ServeFile(w, r, filePath)
+
+	// Set the Content-Type header to "application/json"
+	w.Header().Set("Content-Type", "application/json")
+}
+
 func traceHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
-		url := r.FormValue("url")
+		rawURL := r.FormValue("url")
 
-		redirectURL, hops, err := followRedirects(url)
+		redirectURL, hops, err := followRedirects(rawURL)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error following redirects: %s", err), http.StatusInternalServerError)
 			return
@@ -70,7 +97,7 @@ func traceHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func followRedirects(url string) (string, []Hop, error) {
+func followRedirects(urlStr string) (string, []Hop, error) {
 	client := &http.Client{
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			// Stop following redirects after the first hop
@@ -84,8 +111,18 @@ func followRedirects(url string) (string, []Hop, error) {
 	hops := []Hop{}
 	number := 1
 
+	var previousURL *url.URL
+
 	for {
-		resp, err := client.Get(url)
+		req, err := http.NewRequest("GET", urlStr, nil)
+		if err != nil {
+			return "", nil, fmt.Errorf("error creating request: %s", err)
+		}
+
+		// Set the user agent header
+		req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36")
+
+		resp, err := client.Do(req)
 		if err != nil {
 			return "", nil, fmt.Errorf("error accessing URL: %s", err)
 		}
@@ -93,7 +130,7 @@ func followRedirects(url string) (string, []Hop, error) {
 
 		hop := Hop{
 			Number:     number,
-			URL:        url,
+			URL:        urlStr,
 			StatusCode: resp.StatusCode,
 		}
 		hop.StatusCodeClass = getStatusCodeClass(resp.StatusCode)
@@ -101,24 +138,45 @@ func followRedirects(url string) (string, []Hop, error) {
 
 		if resp.StatusCode >= 300 && resp.StatusCode <= 399 {
 			// Handle redirect
-			url = resp.Header.Get("Location")
-			if url == "" {
+			location := resp.Header.Get("Location")
+			if location == "" {
 				return "", nil, fmt.Errorf("redirect location not found")
 			}
+
+			redirectURL, err := handleRelativeRedirect(previousURL, location)
+			if err != nil {
+				return "", nil, fmt.Errorf("error handling relative redirect: %s", err)
+			}
+
+			urlStr = redirectURL
 			number++
+
+			// Update previousURL with the current URL
+			previousURL, err = url.Parse(urlStr)
+			if err != nil {
+				return "", nil, fmt.Errorf("error parsing URL: %s", err)
+			}
 			continue
 		}
 
-		return url, hops, nil
+		return urlStr, hops, nil
 	}
 }
 
-func staticHandler(w http.ResponseWriter, r *http.Request) {
-	filePath := "static/css/" + strings.TrimPrefix(r.URL.Path, "/static/css/")
-	http.ServeFile(w, r, filePath)
+func handleRelativeRedirect(previousURL *url.URL, location string) (string, error) {
+	redirectURL, err := url.Parse(location)
+	if err != nil {
+		return "", err
+	}
 
-	// Set the Content-Type header to "text/css"
-	w.Header().Set("Content-Type", "text/css")
+	// Use the domain from the previous URL
+	if previousURL != nil {
+		redirectURL.Scheme = previousURL.Scheme
+		redirectURL.Host = previousURL.Host
+	}
+
+	absoluteURL := redirectURL.String()
+	return absoluteURL, nil
 }
 
 func getStatusCodeClass(statusCode int) string {
