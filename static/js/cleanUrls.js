@@ -33,17 +33,12 @@ window.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        let fixedGoodParams = "";
         // Let's just make sure the first character in goodParams is a ?
         if (goodParams.slice(1).length > 0) {
-            fixedGoodParams = "?" + goodParams.slice(1);
+            additionalText += "?" + goodParams.slice(1);
         }
 
-        if (additionalText) {
-            fixedGoodParams += additionalText;
-        }
-
-        return fixedGoodParams;
+        return additionalText;
     }
 
     function filterTheParams(param) {

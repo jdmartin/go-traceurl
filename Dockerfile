@@ -1,13 +1,18 @@
-FROM golang:1.20.4-alpine3.18
-
 #Build 31 May '23
 
-RUN mkdir /app
+# Start by building the application.
+FROM golang:1.20.4 as build
 
-ADD . /app
+WORKDIR /go/src/app
+COPY . .
 
-WORKDIR /app
+RUN go mod download
+RUN CGO_ENABLED=0 go build -o /go/bin/app
 
-RUN go build -o main .
+# Now copy it into our base image.
+FROM gcr.io/distroless/static-debian11
 
-CMD ["/app/main"]
+COPY --from=build /go/bin/app /
+COPY --from=build /go/src/app /
+
+CMD ["/app"]
