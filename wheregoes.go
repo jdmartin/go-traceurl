@@ -28,14 +28,14 @@ type ResultData struct {
 }
 
 func main() {
-	formTemplate = template.Must(template.ParseFiles("form.html"))
-	resultTemplate = template.Must(template.ParseFiles("result.html"))
+	formTemplate = template.Must(template.ParseFiles("static/form.html"))
+	resultTemplate = template.Must(template.ParseFiles("static/result.html"))
 
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/trace", traceHandler)
 	http.HandleFunc("/static/css/", cssHandler)
 	http.HandleFunc("/static/js/", jsHandler)
-	http.HandleFunc("/data/", dataHandler)
+	http.HandleFunc("/static/data/", dataHandler)
 
 	fmt.Println("Server listening on http://localhost:8080")
 	http.ListenAndServe(":8080", nil)
@@ -66,7 +66,7 @@ func jsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func dataHandler(w http.ResponseWriter, r *http.Request) {
-	filePath := "data/" + strings.TrimPrefix(r.URL.Path, "/data/")
+	filePath := "static/data/" + strings.TrimPrefix(r.URL.Path, "/static/data/")
 	http.ServeFile(w, r, filePath)
 
 	// Set the Content-Type header to "application/json"

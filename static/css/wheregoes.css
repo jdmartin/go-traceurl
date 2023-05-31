@@ -1,5 +1,9 @@
 /* CSS */
 
+body {
+  background-color: antiquewhite;
+}
+
 h2 {
   margin-left: 0.5%;
 }
@@ -102,8 +106,6 @@ li {
 }
 
 #resultsDiv {
-  background-color: antiquewhite;
-  height: 100vh;
   padding-left: 5%;
   padding-right: 5%;
 }

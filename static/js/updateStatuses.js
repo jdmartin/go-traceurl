@@ -6,7 +6,9 @@ window.addEventListener("DOMContentLoaded", (event) => {
 
         async function fetchHttpStatusCodes() {
             try {
-                const response = await fetch("data/http_status_codes.json");
+                const response = await fetch(
+                    "static/data/http_status_codes.json"
+                );
                 const json = await response.json();
 
                 tooltipContainers.forEach((tooltipContainer) => {
