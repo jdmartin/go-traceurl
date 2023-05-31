@@ -169,10 +169,13 @@ func handleRelativeRedirect(previousURL *url.URL, location string) (string, erro
 		return "", err
 	}
 
-	// Use the domain from the previous URL
-	if previousURL != nil {
-		redirectURL.Scheme = previousURL.Scheme
-		redirectURL.Host = previousURL.Host
+	// Check if the redirect URL is an absolute URL
+	if !redirectURL.IsAbs() {
+		// Use the domain from the previous URL
+		if previousURL != nil {
+			redirectURL.Scheme = previousURL.Scheme
+			redirectURL.Host = previousURL.Host
+		}
 	}
 
 	absoluteURL := redirectURL.String()
