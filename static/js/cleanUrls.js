@@ -10,6 +10,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
     function extractParameters(url) {
         let goodParams = "";
+        let additionalText = "";
 
         // Split the URL on the last slash
         const lastSlashIndex = url.lastIndexOf("/") + 1;
@@ -27,6 +28,8 @@ window.addEventListener("DOMContentLoaded", () => {
                 if (filterTheParams(key)) {
                     goodParams += `&${key}=${value}`;
                 }
+            } else {
+                additionalText += segment;
             }
         }
 
@@ -34,6 +37,10 @@ window.addEventListener("DOMContentLoaded", () => {
         // Let's just make sure the first character in goodParams is a ?
         if (goodParams.slice(1).length > 0) {
             fixedGoodParams = "?" + goodParams.slice(1);
+        }
+
+        if (additionalText) {
+            fixedGoodParams += additionalText;
         }
 
         return fixedGoodParams;
