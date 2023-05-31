@@ -9,9 +9,6 @@ RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o main .
 
 FROM alpine:3.18.0
 COPY --from=build /main /
-COPY --from=build /form.html /
-COPY --from=build /result.html /
-COPY --from=build /data /data
 COPY --from=build /static /static
 
 CMD ["/main"]
