@@ -1,18 +1,17 @@
+FROM golang:1.20.4-alpine3.18 as build
+
 #Build 31 May '23
-
-# Start by building the application.
-FROM golang:1.20.4 as build
-
-WORKDIR /go/src/app
+RUN mkdir /
+WORKDIR /
 COPY . .
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o main .
 
-RUN go mod download
-RUN CGO_ENABLED=0 go build -o /go/bin/app
 
-# Now copy it into our base image.
-FROM gcr.io/distroless/static-debian11
+FROM alpine:3.18.0
+COPY --from=build /main /
+COPY --from=build /form.html /
+COPY --from=build /result.html /
+COPY --from=build /data /data
+COPY --from=build /static /static
 
-COPY --from=build /go/bin/app /
-COPY --from=build /go/src/app /
-
-CMD ["/app"]
+CMD ["/main"]
