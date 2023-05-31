@@ -2,6 +2,7 @@
 
 body {
   background-color: antiquewhite;
+  font-family: et-book,Palatino,palatino linotype,palatino lt std,book antiqua,Georgia,serif;
 }
 
 /* form.html */
@@ -131,7 +132,7 @@ li {
   color: #fff;
   cursor: pointer;
   display: inline-block;
-  font-family: -apple-system, system-ui, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  /* font-family: -apple-system, system-ui, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji"; */
   font-size: 14px;
   font-weight: 600;
   line-height: 20px;
