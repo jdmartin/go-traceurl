@@ -155,7 +155,6 @@ li {
   color: #fff;
   flex-basis: 8%;
   justify-content: flex-start;
-  margin-right: 20px;
   position: relative;
 }
 
@@ -214,6 +213,8 @@ li {
 
 .tooltip-container {
   position: relative;
+  width: 80px;
+  padding-right: 60px;
 }
 
 .tooltip {
