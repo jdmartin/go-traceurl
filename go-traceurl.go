@@ -7,6 +7,8 @@ import (
 	"net/url"
 	"os"
 	"strings"
+
+	"github.com/microcosm-cc/bluemonday"
 )
 
 var (
@@ -26,7 +28,7 @@ type ResultData struct {
 	Hops         []Hop
 	LastIndex    int
 	StatusCode   int
-	FinalMessage string
+	FinalMessage template.HTML
 }
 
 func main() {
@@ -85,7 +87,17 @@ func traceHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		rawURL := r.FormValue("url")
 
-		redirectURL, hops, err := followRedirects(rawURL)
+		// Validate the URL format
+		parsedURL, err := url.ParseRequestURI(rawURL)
+		if err != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") || parsedURL.Host == "" || !parsedURL.IsAbs() {
+			http.Error(w, "Invalid URL format", http.StatusBadRequest)
+			return
+		}
+
+		// Sanitize URL input using bluemonday
+		sanitizedURL := bluemonday.UGCPolicy().Sanitize(rawURL)
+
+		redirectURL, hops, err := followRedirects(sanitizedURL)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error following redirects: %s", err), http.StatusInternalServerError)
 			return
@@ -109,7 +121,7 @@ func traceHandler(w http.ResponseWriter, r *http.Request) {
 			Hops:         hops,
 			LastIndex:    lastIndex,
 			StatusCode:   finalStatusCode,
-			FinalMessage: finalMessage,
+			FinalMessage: template.HTML(finalMessage),
 		}
 
 		resultTemplate.Execute(w, data)
@@ -167,6 +179,25 @@ func followRedirects(urlStr string) (string, []Hop, error) {
 			redirectURL, err := handleRelativeRedirect(previousURL, location)
 			if err != nil {
 				return "", nil, fmt.Errorf("error handling relative redirect: %s", err)
+			}
+
+			// Check if the "returnUri" query parameter is present
+			u, err := url.Parse(location)
+			if err != nil {
+				return "", nil, fmt.Errorf("error parsing URL: %s", err)
+			}
+			queryParams := u.Query()
+			if returnURI := queryParams.Get("returnUri"); returnURI != "" {
+				decodedReturnURI, err := url.PathUnescape(returnURI)
+				if err != nil {
+					return "", nil, fmt.Errorf("error decoding returnUri: %s", err)
+				}
+				decodedReturnURI = strings.ReplaceAll(decodedReturnURI, "%3A", ":")
+				decodedReturnURI = strings.ReplaceAll(decodedReturnURI, "%2F", "/")
+
+				redirectURL = u.Scheme + "://" + u.Host + u.Path + "?returnUri=" + decodedReturnURI
+			} else {
+				redirectURL = location
 			}
 
 			urlStr = redirectURL
