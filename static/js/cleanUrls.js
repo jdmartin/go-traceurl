@@ -80,7 +80,11 @@ window.addEventListener("DOMContentLoaded", () => {
         const anchorElement = document.createElement("a");
         const encodedGoodParamString = encodeURIComponent(goodParamString);
         const newHref = baseUrl + encodedGoodParamString;
-        anchorElement.setAttribute("href", newHref);
+
+        // Sanitize the newHref using DOMPurify
+        const sanitizedHref = DOMPurify.sanitize(newHref);
+
+        anchorElement.setAttribute("href", sanitizedHref);
         anchorElement.setAttribute("target", "_blank");
         anchorElement.textContent = `${baseUrl}${goodParamString}`;
 
