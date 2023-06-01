@@ -1,3 +1,3 @@
-module wheregoes
+module go-traceurl
 
 go 1.20
