@@ -77,9 +77,11 @@ window.addEventListener("DOMContentLoaded", () => {
         }
 
         // Update the href and text content of the final hop with the modified URL
-        finalHop.querySelector("a").href = `${baseUrl}${goodParamString}`;
-        finalHop.querySelector(
-            "a"
-        ).textContent = `${baseUrl}${goodParamString}`;
+        const anchorElement = finalHop.querySelector("a");
+        anchorElement.href = baseUrl + encodeURIComponent(goodParamString);
+        anchorElement.textContent = ''; // Clear any existing content
+        const textNode = document.createTextNode(`${baseUrl}${goodParamString}`);
+        anchorElement.appendChild(textNode);
+
     }
 });
