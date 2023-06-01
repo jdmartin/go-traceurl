@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os"
 	"strings"
+	"sync/atomic"
 
 	"github.com/microcosm-cc/bluemonday"
 )
@@ -14,6 +15,7 @@ import (
 var (
 	formTemplate   *template.Template
 	resultTemplate *template.Template
+	traceCount     int64
 )
 
 type Hop struct {
@@ -29,6 +31,7 @@ type ResultData struct {
 	LastIndex    int
 	StatusCode   int
 	FinalMessage template.HTML
+	TraceCount   int64
 }
 
 func main() {
@@ -42,6 +45,7 @@ func main() {
 
 	http.HandleFunc("/", homeHandler)
 	http.HandleFunc("/trace", traceHandler)
+	http.HandleFunc("/tracecount", traceCountHandler)
 	http.HandleFunc("/static/css/", cssHandler)
 	http.HandleFunc("/static/js/", jsHandler)
 	http.HandleFunc("/static/data/", dataHandler)
@@ -53,10 +57,16 @@ func main() {
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
-		formTemplate.Execute(w, nil)
+		data := struct {
+			TraceCount int64
+		}{
+			TraceCount: atomic.LoadInt64(&traceCount),
+		}
+		formTemplate.Execute(w, data)
 	} else {
 		http.Redirect(w, r, "/", http.StatusFound)
 	}
+
 }
 
 func cssHandler(w http.ResponseWriter, r *http.Request) {
@@ -84,6 +94,9 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func traceHandler(w http.ResponseWriter, r *http.Request) {
+	// Increment the trace count
+	atomic.AddInt64(&traceCount, 1)
+
 	if r.Method == "POST" {
 		rawURL := r.FormValue("url")
 
@@ -128,6 +141,11 @@ func traceHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		http.Redirect(w, r, "/", http.StatusFound)
 	}
+}
+
+func traceCountHandler(w http.ResponseWriter, r *http.Request) {
+	count := atomic.LoadInt64(&traceCount)
+	fmt.Fprintf(w, "%d", count)
 }
 
 func followRedirects(urlStr string) (string, []Hop, error) {
