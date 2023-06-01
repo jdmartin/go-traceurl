@@ -46,6 +46,7 @@ window.addEventListener("DOMContentLoaded", () => {
             // List of known bad parts to discard
             const badParts = [
                 "cid",
+                "ck_subscriber_id",
                 "cmpid",
                 "fbclid",
                 "gclid",
