@@ -14,7 +14,7 @@ env:
   # Use docker.io for Docker Hub if empty
   REGISTRY: docker.io
   # github.repository as <account>/<repo>
-  IMAGE_NAME: wheregoes
+  IMAGE_NAME: go-traceurl
 
 
 jobs:      
@@ -63,7 +63,7 @@ jobs:
           platforms: linux/amd64,linux/arm64
           provenance: false
           push: ${{ github.event_name != 'pull_request' }}
-          tags: songsthatsaved/wheregoes:latest
+          tags: songsthatsaved/go-traceurl:latest
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
