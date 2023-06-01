@@ -182,7 +182,7 @@ func followRedirects(urlStr string) (string, []Hop, error) {
 			}
 
 			// Check if the "returnUri" query parameter is present
-			u, err := url.Parse(location)
+			u, err := url.Parse(redirectURL)
 			if err != nil {
 				return "", nil, fmt.Errorf("error parsing URL: %s", err)
 			}
@@ -196,8 +196,6 @@ func followRedirects(urlStr string) (string, []Hop, error) {
 				decodedReturnURI = strings.ReplaceAll(decodedReturnURI, "%2F", "/")
 
 				redirectURL = u.Scheme + "://" + u.Host + u.Path + "?returnUri=" + decodedReturnURI
-			} else {
-				redirectURL = location
 			}
 
 			urlStr = redirectURL
@@ -227,9 +225,17 @@ func handleRelativeRedirect(previousURL *url.URL, location string) (string, erro
 		if previousURL != nil {
 			redirectURL.Scheme = previousURL.Scheme
 			redirectURL.Host = previousURL.Host
+		} else {
+			// Use the current host
+			currentURL, err := url.Parse(location)
+			if err == nil {
+				redirectURL.Scheme = currentURL.Scheme
+				redirectURL.Host = currentURL.Host
+			} else {
+				return "", err
+			}
 		}
 	}
-
 	absoluteURL := redirectURL.String()
 	return absoluteURL, nil
 }
