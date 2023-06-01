@@ -1,6 +1,7 @@
 window.addEventListener("DOMContentLoaded", () => {
     const finalHop = document.querySelector("#final-hop");
     const removedParamsSpan = document.querySelector("#removed-params");
+    const rawFinal = document.querySelector(".rawFinalUrl");
 
     if (finalHop) {
         // Extract the URL from the final hop
@@ -76,6 +77,11 @@ window.addEventListener("DOMContentLoaded", () => {
             removedParamsSpan.textContent = removedParams.join(", ");
         }
 
+        // Create a new text node to show the pre-sanitized URL
+        const sanitizedURL = DOMPurify.sanitize(url);
+        rawFinal.innerHTML = "";
+        rawFinal.textContent = "☢️ Uncleaned Final URL: " + sanitizedURL;
+
         // Create a new anchor element to store the modified URL
         const anchorElement = document.createElement("a");
         const encodedGoodParamString = encodeURIComponent(goodParamString);
@@ -91,6 +97,5 @@ window.addEventListener("DOMContentLoaded", () => {
         // Replace the existing finalHop content with the modified URL
         finalHop.innerHTML = ""; // Clear any existing content
         finalHop.appendChild(anchorElement);
-
     }
 });

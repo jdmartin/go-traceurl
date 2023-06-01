@@ -17,8 +17,9 @@
 			<h2>Where does this URL go?</h2>
 			<form action="/trace" method="post" autocomplete="off" onsubmit="return validateForm()">
 				<input type="text" id="urlInput" name="url" placeholder="Enter URL here..." required>
-				<input type="submit" value="Trace URL">
+				<input type="submit" id="traceButton" value="Trace URL">
 			</form>
+			<span id="antiqueCounter">Times Used Since Last Reset: {{ .TraceCount }}</span>
 		</div>
 	</div>
 	<script>
