@@ -13,10 +13,10 @@ window.addEventListener("DOMContentLoaded", (event) => {
 
                 tooltipContainers.forEach((tooltipContainer) => {
                     const statusButton = tooltipContainer.querySelector(
-                        ".status-code > #status-button"
+                        "#status-button"
                     );
                     const tooltip = tooltipContainer.querySelector(
-                        ".status-code > .tooltip"
+                        ".tooltip"
                     );
 
                     statusButton.addEventListener("mouseover", (event) => {
