@@ -76,14 +76,17 @@ window.addEventListener("DOMContentLoaded", () => {
             removedParamsSpan.textContent = removedParams.join(", ");
         }
 
-        // Update the href and text content of the final hop with the modified URL
-        const anchorElement = finalHop.querySelector("a");
+        // Create a new anchor element to store the modified URL
+        const anchorElement = document.createElement("a");
         const encodedGoodParamString = encodeURIComponent(goodParamString);
         const newHref = baseUrl + encodedGoodParamString;
         anchorElement.setAttribute("href", newHref);
-        anchorElement.textContent = ''; // Clear any existing content
-        const textNode = document.createTextNode(`${baseUrl}${goodParamString}`);
-        anchorElement.appendChild(textNode);
+        anchorElement.setAttribute("target", "_blank");
+        anchorElement.textContent = `${baseUrl}${goodParamString}`;
+
+        // Replace the existing finalHop content with the modified URL
+        finalHop.innerHTML = ""; // Clear any existing content
+        finalHop.appendChild(anchorElement);
 
     }
 });
