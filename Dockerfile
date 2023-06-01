@@ -1,6 +1,6 @@
 FROM golang:1.20.4-alpine3.18 as build
 
-#Build 31 May '23 - First as go-traceurl
+#Build 1 June 2023
 
 RUN mkdir /
 WORKDIR /
