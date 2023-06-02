@@ -1,5 +1,10 @@
 window.addEventListener("DOMContentLoaded", () => {
     const finalHop = document.querySelector("#final-hop");
+
+    // We only want the link to work after it's cleaned. We re-enable at the bottom.
+    const finalHopLink = document.querySelector("#final-hop a");
+    finalHopLink.removeAttribute("href");
+
     const removedParamsSpan = document.querySelector("#removed-params");
     const rawFinal = document.querySelector(".rawFinalUrl");
 
