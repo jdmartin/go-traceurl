@@ -89,8 +89,9 @@ window.addEventListener("DOMContentLoaded", () => {
 
         // Sanitize the newHref using DOMPurify
         const sanitizedHref = DOMPurify.sanitize(newHref);
+        const fixedURL = sanitizedHref.replace(/%3F/g, '?');
 
-        anchorElement.setAttribute("href", sanitizedHref);
+        anchorElement.setAttribute("href", fixedURL);
         anchorElement.setAttribute("target", "_blank");
         anchorElement.textContent = `${baseUrl}${goodParamString}`;
 
