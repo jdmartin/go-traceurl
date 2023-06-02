@@ -214,14 +214,12 @@ form {
   position: absolute;
   visibility: hidden;
   width: 120px;
-  background-color: #f26dbe;
+  background-color: #fd95d4;
   color: #000;
   text-align: center;
   border-radius: 6px;
   padding: 5px 0;
-  bottom: 50%;
-  left: 50%;
-  transform: translateX(-50%);
+  transform: translateY(-120%);
   margin-bottom: 5px;
 }
 
