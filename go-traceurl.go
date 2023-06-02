@@ -1,13 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"net/http"
 	"net/url"
 	"os"
+	"os/signal"
 	"strings"
-	"sync/atomic"
 
 	"github.com/microcosm-cc/bluemonday"
 )
@@ -15,7 +16,6 @@ import (
 var (
 	formTemplate   *template.Template
 	resultTemplate *template.Template
-	traceCount     int64
 )
 
 type Hop struct {
@@ -31,10 +31,37 @@ type ResultData struct {
 	LastIndex    int
 	StatusCode   int
 	FinalMessage template.HTML
-	TraceCount   int64
+}
+
+type Config struct {
+	UseCount int `json:"UseCount"`
 }
 
 func main() {
+	// Handle SIGINT signal
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+
+	// Load the cached value on startup
+	config, err := loadConfig()
+	if err != nil {
+		fmt.Println("No cached value found.")
+		config = &Config{UseCount: 0}
+	}
+
+	// Listen for SIGINT
+	go func() {
+		<-c
+		fmt.Println("\nReceived SIGINT. Caching the current value...")
+
+		// Cache the value on SIGINT
+		if err := saveConfig(config); err != nil {
+			fmt.Println("Error saving the config:", err)
+		}
+
+		os.Exit(0)
+	}()
+
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
@@ -43,9 +70,12 @@ func main() {
 	formTemplate = template.Must(template.ParseFiles("static/form.html"))
 	resultTemplate = template.Must(template.ParseFiles("static/result.html"))
 
-	http.HandleFunc("/", homeHandler)
-	http.HandleFunc("/trace", traceHandler)
-	http.HandleFunc("/tracecount", traceCountHandler)
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		homeHandler(w, r, config)
+	})
+	http.HandleFunc("/trace", func(w http.ResponseWriter, r *http.Request) {
+		traceHandler(w, r, config)
+	})
 	http.HandleFunc("/static/css/", cssHandler)
 	http.HandleFunc("/static/js/", jsHandler)
 	http.HandleFunc("/static/data/", dataHandler)
@@ -55,12 +85,12 @@ func main() {
 	http.ListenAndServe(addr, nil)
 }
 
-func homeHandler(w http.ResponseWriter, r *http.Request) {
+func homeHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 	if r.Method == "GET" {
 		data := struct {
-			TraceCount int64
+			UseCount int
 		}{
-			TraceCount: atomic.LoadInt64(&traceCount),
+			UseCount: config.UseCount,
 		}
 		formTemplate.Execute(w, data)
 	} else {
@@ -93,9 +123,10 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 }
 
-func traceHandler(w http.ResponseWriter, r *http.Request) {
-	// Increment the trace count
-	atomic.AddInt64(&traceCount, 1)
+func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
+	// Increment the UseCount
+	config.UseCount++
+	fmt.Println("Updated UseCount:", config.UseCount)
 
 	if r.Method == "POST" {
 		rawURL := r.FormValue("url")
@@ -141,11 +172,6 @@ func traceHandler(w http.ResponseWriter, r *http.Request) {
 	} else {
 		http.Redirect(w, r, "/", http.StatusFound)
 	}
-}
-
-func traceCountHandler(w http.ResponseWriter, r *http.Request) {
-	count := atomic.LoadInt64(&traceCount)
-	fmt.Fprintf(w, "%d", count)
 }
 
 func followRedirects(urlStr string) (string, []Hop, error) {
@@ -271,4 +297,27 @@ func getStatusCodeClass(statusCode int) string {
 	default:
 		return ""
 	}
+}
+
+func saveConfig(config *Config) error {
+	data, err := json.Marshal(config)
+	if err != nil {
+		return err
+	}
+
+	return os.WriteFile("static/data/count.json", data, 0644)
+}
+
+func loadConfig() (*Config, error) {
+	data, err := os.ReadFile("static/data/count.json")
+	if err != nil {
+		return nil, err
+	}
+
+	var config Config
+	err = json.Unmarshal(data, &config)
+	if err != nil {
+		return nil, err
+	}
+	return &config, nil
 }
