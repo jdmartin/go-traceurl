@@ -51,6 +51,7 @@ window.addEventListener("DOMContentLoaded", () => {
         function filterTheParams(param) {
             // List of known bad parts to discard
             const badParts = [
+                "_kx",
                 "cid",
                 "ck_subscriber_id",
                 "cmpid",
