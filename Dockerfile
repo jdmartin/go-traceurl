@@ -1,6 +1,6 @@
 FROM golang:1.20.4-alpine3.18 as build
 
-#Build 1 June 2023 - Evening.
+#Build 2 June 2023
 
 RUN mkdir /
 WORKDIR /
