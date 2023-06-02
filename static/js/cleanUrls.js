@@ -55,8 +55,10 @@ window.addEventListener("DOMContentLoaded", () => {
                 "cid",
                 "ck_subscriber_id",
                 "cmpid",
+                "ea.tracking.id",
                 "fbclid",
                 "gclid",
+                "mailId",
                 "msclkid",
                 "mc_cid",
                 "mc_eid",
@@ -64,6 +66,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
             const isBadPart =
                 badParts.includes(param) ||
+                param.startsWith("cm_") ||
                 param.startsWith("pk_") ||
                 param.startsWith("utm_");
             if (isBadPart) {

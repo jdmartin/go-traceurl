@@ -140,8 +140,9 @@ func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 
 		// Sanitize URL input using bluemonday
 		sanitizedURL := bluemonday.UGCPolicy().Sanitize(rawURL)
+		fixedSanitizedURL := strings.ReplaceAll(sanitizedURL, "&amp;", "&")
 
-		redirectURL, hops, err := followRedirects(sanitizedURL)
+		redirectURL, hops, err := followRedirects(fixedSanitizedURL)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error following redirects: %s", err), http.StatusInternalServerError)
 			return
