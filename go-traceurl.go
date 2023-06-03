@@ -1,6 +1,8 @@
 package main
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"html/template"
@@ -85,18 +87,46 @@ func main() {
 	http.ListenAndServe(addr, nil)
 }
 
+func GenerateNonce() (string, error) {
+	// Define the desired length of the nonce (in bytes)
+	nonceLength := 16
+
+	// Generate random bytes for the nonce
+	nonceBytes := make([]byte, nonceLength)
+	_, err := rand.Read(nonceBytes)
+	if err != nil {
+		return "", err
+	}
+
+	// Encode the random bytes as a base64 string
+	nonce := base64.StdEncoding.EncodeToString(nonceBytes)
+
+	return nonce, nil
+}
+
 func homeHandler(w http.ResponseWriter, r *http.Request, config *Config) {
+	nonce, err := GenerateNonce()
+	if err != nil {
+		fmt.Println("Failed to generate nonce:", err)
+	}
+
+	// Set security headers
+	w.Header().Set("Content-Security-Policy", fmt.Sprintf("default-src 'self'; script-src 'nonce-%s'", nonce))
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("X-Frame-Options", "SAMEORIGIN")
+
 	if r.Method == "GET" {
 		data := struct {
+			Nonce    string
 			UseCount int
 		}{
+			Nonce:    nonce, // Pass the nonce value to the template data
 			UseCount: config.UseCount,
 		}
 		formTemplate.Execute(w, data)
 	} else {
 		http.Redirect(w, r, "/", http.StatusFound)
 	}
-
 }
 
 func cssHandler(w http.ResponseWriter, r *http.Request) {
@@ -185,7 +215,6 @@ func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 	}
 
 	resultTemplate.Execute(w, data)
-
 }
 
 func followRedirects(urlStr string) (string, []Hop, error) {
