@@ -1,6 +1,9 @@
 /* CSS */
 
 /* form.html */
+.form-body {
+  background-color: cornflowerblue;
+}
 
 .container {
   display: flex;
