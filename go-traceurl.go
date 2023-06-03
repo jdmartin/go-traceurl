@@ -131,10 +131,8 @@ func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 	var rawURL string
 	if r.Method == "POST" {
 		rawURL = r.FormValue("url")
-		fmt.Println(rawURL)
 	} else if r.Method == "GET" {
 		rawURL = r.URL.Query().Get("url")
-		fmt.Println(rawURL)
 	} else {
 		http.Redirect(w, r, "/", http.StatusFound)
 	}
