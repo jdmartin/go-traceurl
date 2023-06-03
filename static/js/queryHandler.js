@@ -17,4 +17,16 @@ window.addEventListener("DOMContentLoaded", () => {
         return true;
     }
 
+    // Function to handle form submission and perform validation
+    function handleSubmit(event) {
+        // Validate the form
+        if (!validateForm()) {
+            // Prevent the form from submitting if validation fails
+            event.preventDefault();
+        }
+    }
+
+    // Add event listener to the form's submit event
+    var form = document.getElementById("traceForm");
+    form.addEventListener("submit", handleSubmit);
 });

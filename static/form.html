@@ -4,18 +4,13 @@
 <head>
 	<title>URL Tracer - Form</title>
 	<link rel="stylesheet" href="/static/css/gotrace.css">
-	<style>
-		body {
-			background-color: cornflowerblue;
-		}
-	</style>
 </head>
 
-<body>
+<body class="form-body">
 	<div class="container">
 		<div class="form-container">
 			<h2>Where does this URL go?</h2>
-			<form id="traceForm" action="/trace" method="post" autocomplete="off" onsubmit="return validateForm()">
+			<form id="traceForm" action="/trace" method="post" autocomplete="off">
 				<input type="text" id="urlInput" name="url" placeholder="Enter URL here..." autocorrect="off" autocapitalize="off" spellcheck="false" required>
 				<input type="submit" id="traceButton" value="Trace URL">
 			</form>
