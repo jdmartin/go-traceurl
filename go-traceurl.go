@@ -128,51 +128,63 @@ func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 	config.UseCount++
 	fmt.Println("Updated UseCount:", config.UseCount)
 
+	var rawURL string
 	if r.Method == "POST" {
-		rawURL := r.FormValue("url")
-
-		// Validate the URL format
-		parsedURL, err := url.ParseRequestURI(rawURL)
-		if err != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") || parsedURL.Host == "" || !parsedURL.IsAbs() {
-			http.Error(w, "Invalid URL format", http.StatusBadRequest)
-			return
-		}
-
-		// Sanitize URL input using bluemonday
-		sanitizedURL := bluemonday.UGCPolicy().Sanitize(rawURL)
-		fixedSanitizedURL := strings.ReplaceAll(sanitizedURL, "&amp;", "&")
-
-		redirectURL, hops, err := followRedirects(fixedSanitizedURL)
-		if err != nil {
-			http.Error(w, fmt.Sprintf("Error following redirects: %s", err), http.StatusInternalServerError)
-			return
-		}
-
-		lastIndex := len(hops) - 1
-
-		var finalStatusCode int
-		var finalMessage string
-
-		if lastIndex >= 0 {
-			finalStatusCode = hops[lastIndex].StatusCode
-		} else {
-			finalStatusCode = http.StatusInternalServerError
-			finalMessage = "Redirect Location Not Provided By Headers"
-			hops = append(hops, Hop{Number: 1, URL: rawURL, StatusCode: finalStatusCode, StatusCodeClass: getStatusCodeClass(finalStatusCode)})
-		}
-
-		data := ResultData{
-			RedirectURL:  redirectURL,
-			Hops:         hops,
-			LastIndex:    lastIndex,
-			StatusCode:   finalStatusCode,
-			FinalMessage: template.HTML(finalMessage),
-		}
-
-		resultTemplate.Execute(w, data)
+		rawURL = r.FormValue("url")
+		fmt.Println(rawURL)
+	} else if r.Method == "GET" {
+		rawURL = r.URL.Query().Get("url")
+		fmt.Println(rawURL)
 	} else {
 		http.Redirect(w, r, "/", http.StatusFound)
 	}
+
+	// Validate the URL format
+	parsedURL, err := url.ParseRequestURI(rawURL)
+	if err != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") || parsedURL.Host == "" || !parsedURL.IsAbs() {
+		http.Error(w, "Invalid URL format", http.StatusBadRequest)
+		return
+	}
+
+	// Check if the URL parameter contains the server name
+	if strings.Contains(parsedURL.Host, r.Host) {
+		http.Error(w, "Redirecting to URLs within the same server is not allowed", http.StatusBadRequest)
+		return
+	}
+
+	// Sanitize URL input using bluemonday
+	sanitizedURL := bluemonday.UGCPolicy().Sanitize(rawURL)
+	fixedSanitizedURL := strings.ReplaceAll(sanitizedURL, "&amp;", "&")
+
+	redirectURL, hops, err := followRedirects(fixedSanitizedURL)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error following redirects: %s", err), http.StatusInternalServerError)
+		return
+	}
+
+	lastIndex := len(hops) - 1
+
+	var finalStatusCode int
+	var finalMessage string
+
+	if lastIndex >= 0 {
+		finalStatusCode = hops[lastIndex].StatusCode
+	} else {
+		finalStatusCode = http.StatusInternalServerError
+		finalMessage = "Redirect Location Not Provided By Headers"
+		hops = append(hops, Hop{Number: 1, URL: rawURL, StatusCode: finalStatusCode, StatusCodeClass: getStatusCodeClass(finalStatusCode)})
+	}
+
+	data := ResultData{
+		RedirectURL:  redirectURL,
+		Hops:         hops,
+		LastIndex:    lastIndex,
+		StatusCode:   finalStatusCode,
+		FinalMessage: template.HTML(finalMessage),
+	}
+
+	resultTemplate.Execute(w, data)
+
 }
 
 func followRedirects(urlStr string) (string, []Hop, error) {
