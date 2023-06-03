@@ -18,7 +18,7 @@
 						<h2 class="title">Hops your link traversed:</h2>
 					</th>
 				</tr>
-				<tr>
+				<tr class="column-labels">
 					<th>Hop</th>
 					<th>Status</th>
 					<th>URL</th>
@@ -49,18 +49,18 @@
 				<tr class="result-info result-info-start">
 					<td></td>
 					<td></td>
-					<td><span class="rawFinalUrl"></span></td>
+					<td><span class="rawFinalUrl">☢️ <strong>Uncleaned Final URL:</strong> </span></td>
 				</tr>
 				<tr class="result-info">
 					<td></td>
 					<td></td>
-					<td><span>🧙 Parameters Removed from Destination URL: <span id="removed-params"></span></span></td>
+					<td><span>🧙 <strong>Parameters Removed from Destination URL:</strong> <span id="removed-params"></span></span></td>
 				</tr>
 				{{if ne .FinalMessage ""}}
 				<tr class="result-info">
 					<td></td>
 					<td></td>
-					<td><span class="final-message">🥷 Secret: {{.FinalMessage}}</span></td>
+					<td><span class="final-message">🥷 <strong>Secret:</strong> {{.FinalMessage}}</span></td>
 				</tr>
 				{{end}}
 			</tbody>

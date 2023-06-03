@@ -15,31 +15,14 @@
 	<div class="container">
 		<div class="form-container">
 			<h2>Where does this URL go?</h2>
-			<form action="/trace" method="post" autocomplete="off" onsubmit="return validateForm()">
-				<input type="text" id="urlInput" name="url" placeholder="Enter URL here..." required>
+			<form id="traceForm" action="/trace" method="post" autocomplete="off" onsubmit="return validateForm()">
+				<input type="text" id="urlInput" name="url" placeholder="Enter URL here..." autocorrect="off" autocapitalize="off" spellcheck="false" required>
 				<input type="submit" id="traceButton" value="Trace URL">
 			</form>
 			<span id="antiqueCounter">Times Used Since Last Build: {{ .UseCount }}</span>
 		</div>
 	</div>
-	<script>
-		function validateForm() {
-			var urlInput = document.getElementById("urlInput");
-			var url = urlInput.value;
-
-			// Perform client-side validation checks
-			if (!/^https?:\/\//i.test(url)) {
-				alert("Invalid URL format. Please include 'http://' or 'https://' in the URL.");
-				urlInput.focus();
-				return false;
-			}
-			
-			// Look, this is more about expectations than security. I get that.
-			// Additional validation checks can be added here
-			// URL is valid, allow form submission
-			return true;
-		}
-	</script>
+	<script src="../static/js/queryHandler.js"></script>
 </body>
 
 </html>
