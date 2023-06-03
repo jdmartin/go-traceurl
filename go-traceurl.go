@@ -11,7 +11,10 @@ import (
 	"os"
 	"os/signal"
 	"strings"
+	"time"
 
+	"github.com/didip/tollbooth/v7"
+	"github.com/didip/tollbooth/v7/limiter"
 	"github.com/microcosm-cc/bluemonday"
 )
 
@@ -33,6 +36,7 @@ type ResultData struct {
 	LastIndex    int
 	StatusCode   int
 	FinalMessage template.HTML
+	Nonce        string
 }
 
 type Config struct {
@@ -40,6 +44,17 @@ type Config struct {
 }
 
 func main() {
+	// Create a rate limiter with a limit of 10 requests per minute
+	lim := tollbooth.NewLimiter(1, &limiter.ExpirableOptions{
+		DefaultExpirationTTL: time.Hour,
+	})
+	lim.SetIPLookups([]string{"RemoteAddr", "X-Forwarded-For", "X-Real-IP"})
+
+	// Set the headers for rate limiting
+	lim.SetTokenBucketExpirationTTL(time.Hour)
+	lim.SetBasicAuthExpirationTTL(time.Hour)
+	lim.SetHeaderEntryExpirationTTL(time.Hour)
+
 	// Handle SIGINT signal
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -73,9 +88,23 @@ func main() {
 	resultTemplate = template.Must(template.ParseFiles("static/result.html"))
 
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// Limit the request using the rate limiter
+		httpError := tollbooth.LimitByRequest(lim, w, r)
+		if httpError != nil {
+			http.Error(w, httpError.Message, httpError.StatusCode)
+			return
+		}
+		// Handle the request
 		homeHandler(w, r, config)
 	})
 	http.HandleFunc("/trace", func(w http.ResponseWriter, r *http.Request) {
+		// Limit the request using the rate limiter
+		httpError := tollbooth.LimitByRequest(lim, w, r)
+		if httpError != nil {
+			http.Error(w, httpError.Message, httpError.StatusCode)
+			return
+		}
+		// Handle the request
 		traceHandler(w, r, config)
 	})
 	http.HandleFunc("/static/css/", cssHandler)
@@ -158,6 +187,16 @@ func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 	config.UseCount++
 	fmt.Println("Updated UseCount:", config.UseCount)
 
+	nonce, err := GenerateNonce()
+	if err != nil {
+		fmt.Println("Failed to generate nonce:", err)
+	}
+
+	// Set security headers
+	w.Header().Set("Content-Security-Policy", fmt.Sprintf("default-src 'self'; script-src 'nonce-%s'", nonce))
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("X-Frame-Options", "SAMEORIGIN")
+
 	var rawURL string
 	if r.Method == "POST" {
 		rawURL = r.FormValue("url")
@@ -212,6 +251,7 @@ func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 		LastIndex:    lastIndex,
 		StatusCode:   finalStatusCode,
 		FinalMessage: template.HTML(finalMessage),
+		Nonce:        nonce,
 	}
 
 	resultTemplate.Execute(w, data)
