@@ -6,7 +6,6 @@ window.addEventListener("DOMContentLoaded", () => {
     finalHopLink.removeAttribute("href");
 
     const removedParamsSpan = document.querySelector("#removed-params");
-    const rawFinal = document.querySelector(".rawFinalUrl");
 
     if (finalHop) {
         // Extract the URL from the final hop
@@ -88,8 +87,15 @@ window.addEventListener("DOMContentLoaded", () => {
 
         // Create a new text node to show the pre-sanitized URL
         const sanitizedURL = DOMPurify.sanitize(url);
-        rawFinal.innerHTML = "";
-        rawFinal.textContent = "☢️ Uncleaned Final URL: " + sanitizedURL;
+        const sanitizedURLNode = document.createTextNode(sanitizedURL);
+        // Find the <span> element
+        const spanElement = document.querySelector('.rawFinalUrl');
+        // Find the <strong> element inside the <span>
+        const strongElement = spanElement.querySelector('strong');
+        // Find the text node inside the <strong> element
+        const textNode = strongElement.firstChild;
+        // Insert the sanitized URL after the text node
+        spanElement.parentNode.insertBefore(sanitizedURLNode, spanElement.nextSibling);
 
         // Create a new anchor element to store the modified URL
         const anchorElement = document.createElement("a");

@@ -25,7 +25,7 @@
 
 .form-container {
   position: relative;
-  max-width: 400px;
+  max-width: 50%;
   width: 100%;
   padding: 20px;
   border: 1px solid #ccc;
@@ -50,7 +50,7 @@ form {
 
 #traceButton {
   padding: 10px 20px;
-  background-color: aquamarine;
+  background-color: #7fffd4;
   border: none;
   cursor: pointer;
   flex-basis: 5%;
@@ -69,18 +69,18 @@ form {
 }
 
 .form-container input[type="submit"] {
-  background-color: aquamarine;
+  background-color: #7fffd4;
 }
 
 /* result.html */
 
 #resultsBody {
-  background-color: darkorchid;
+  background-color: #a94ed7;
 }
 
 .button-3 {
   appearance: none;
-  background-color: #ffaaf5;
+  background-color: #FE38E4 !important;
   border: 1px solid rgba(27, 31, 35, .15);
   border-radius: 6px;
   box-shadow: rgba(27, 31, 35, .1) 0 1px 0;
@@ -94,7 +94,7 @@ form {
   margin-top: 7px;
   padding: 6px 16px;
   position: absolute;
-  right: 4.5%;
+  right: 10.25%;
   text-align: center;
   text-decoration: none;
   user-select: none;
@@ -110,11 +110,11 @@ form {
 }
 
 .button-3:hover {
-  background-color: #50e47b;
+  background-color: #012437 !important;
 }
 
 .button-3:hover a {
-  color: black;
+  color: #FE38E4 !important;
 }
 
 .button-3:focus {
@@ -134,14 +134,14 @@ form {
   box-shadow: rgba(20, 70, 32, .2) 0 1px 0 inset;
 }
 
-.button-3>a {
-  color: black;
+.button-3 > a {
+  color: #012437;
 }
 
 .results-container {
   margin: 0 auto;
   /* Centers the container horizontally */
-  max-width: 92%;
+  max-width: 80%;
   /* Adjust the max-width as needed */
   padding: 0 20px;
   /* Adds left and right indentation */
@@ -161,21 +161,22 @@ form {
   font-family: Helvetica, Arial, sans-serif;
 }
 
-.status-code {
-  display: flex;
-  border-radius: 5px;
-  color: #fff;
-  flex-basis: 8%;
-  justify-content: flex-start;
-  position: relative;
-}
-
 #status-button {
   width: 50%;
   display: inline-block;
   border-radius: 5px;
   text-align: center;
   padding: 10px 10px 10px 10px;
+}
+
+.status-code {
+  display: flex;
+  border-radius: 5px;
+  color: #000;
+  flex-basis: 8%;
+  justify-content: flex-start;
+  position: relative;
+  font-weight: bold;
 }
 
 .status-code-2xx {
@@ -192,7 +193,6 @@ form {
 
 .status-code-5xx {
   background-color: #ffc107;
-  color: black;
 }
 
 .title {
@@ -200,7 +200,7 @@ form {
   text-align: left;
   vertical-align: middle;
   display: inline-block;
-  color: aqua;
+  color: #67ffff;
 }
 
 .tooltip-container {
@@ -221,6 +221,7 @@ form {
   padding: 5px 0;
   transform: translateY(-120%);
   margin-bottom: 5px;
+  border: 1px solid black;
 }
 
 .tooltip-container:hover .tooltip {
@@ -264,6 +265,11 @@ td:nth-child(3) {
 thead {
   border-bottom: 1px solid black;
   color: white;
+}
+
+thead .column-labels {
+  font-size: large;
+  color: #000;
 }
 
 tbody {
