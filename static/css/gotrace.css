@@ -198,6 +198,20 @@ form {
   background-color: #ffc107;
 }
 
+.info-icon {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background-color: #959595;
+  color: white;
+  text-align: center;
+  font-weight: bold;
+  font-size: 14px;
+  line-height: 20px;
+  margin-left: 5px;
+}
+
 .title {
   width: 30%;
   text-align: left;
@@ -219,6 +233,7 @@ form {
   width: 120px;
   background-color: #fd95d4;
   color: #000;
+  font-size: larger;
   text-align: center;
   border-radius: 6px;
   padding: 5px 0;
