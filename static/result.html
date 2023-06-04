@@ -7,6 +7,7 @@
 	<script src="./static/js/purify.min.js" nonce="{{.Nonce}}"></script>
 	<script src="./static/js/cleanUrls.js" nonce="{{.Nonce}}"></script>
 	<script src="./static/js/updateStatuses.js" nonce="{{.Nonce}}"></script>
+	<script src="./static/js/toggleMeta.js" nonce="{{.Nonce}}"></script>
 	<script src="./static/js/downloadHelper.js" nonce="{{.Nonce}}"></script>
 </head>
 
@@ -34,7 +35,7 @@
 							<span class="status-code">
 								<span id="status-button"
 									class="status-code-{{$hop.StatusCodeClass}}">{{$hop.StatusCode}}</span>
-									<span class="info-icon">i<span class="tooltip"></span></span>
+									<span class="info-icon">?<span class="tooltip"></span></span>
 							</span>
 						</span>
 					</td>
@@ -67,9 +68,11 @@
 			</tbody>
 		</table>
 	</div>
-		<button class="button-3 dl-button" role="button" id="downloadButton">Download as JSON</button>
-		<button class="button-3" role="button"><a href="/">Trace another URL</a></button>
-	</div>
+		<div class="controls-container">
+			<button class="button-3 meta-button" role="button" id="toggleButton">Toggle Meta</button>
+			<button class="button-3 dl-button" role="button" id="downloadButton">Download as JSON</button>
+			<button class="button-3" role="button"><a href="/">Trace another URL</a></button>
+		</div>
 </body>
 
 </html>

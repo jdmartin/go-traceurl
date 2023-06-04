@@ -88,16 +88,15 @@ form {
   border-radius: 6px;
   box-shadow: rgba(27, 31, 35, .1) 0 1px 0;
   box-sizing: border-box;
-  color: #fff;
+  color: #000;
   cursor: pointer;
   font-family: -apple-system, system-ui, "Segoe UI", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   font-size: 14px;
   font-weight: 600;
   line-height: 20px;
   margin-top: 7px;
+  margin-right: 7px;
   padding: 6px 16px;
-  position: absolute;
-  right: 10.25%;
   text-align: center;
   text-decoration: none;
   user-select: none;
@@ -107,10 +106,6 @@ form {
   white-space: nowrap;
 }
 
-.dl-button {
-  right: 22% !important;
-}
-
 .button-3:focus:not(:focus-visible):not(.focus-visible) {
   box-shadow: none;
   outline: none;
@@ -118,6 +113,7 @@ form {
 
 .button-3:hover {
   background-color: #012437 !important;
+  color:rgba(0, 191, 255, 0.8);
 }
 
 .button-3:hover a {
@@ -141,7 +137,7 @@ form {
   box-shadow: rgba(20, 70, 32, .2) 0 1px 0 inset;
 }
 
-.button-3 > a {
+.button-3>a {
   color: #012437;
 }
 
@@ -153,6 +149,14 @@ form {
   padding: 0 20px;
   /* Adds left and right indentation */
   font-family: Helvetica, Arial, sans-serif;
+}
+
+.controls-container {
+  display: flex;
+  justify-content: space-between;
+  width: 20%;
+  position: absolute;
+  right: 18%;
 }
 
 #removed-params {
@@ -208,7 +212,7 @@ form {
   height: 16px;
   border-radius: 50%;
   background-color: #959595;
-  color: white;
+  color: #000;
   text-align: center;
   font-weight: bold;
   font-size: 14px;
@@ -309,6 +313,10 @@ tbody tr:nth-child(odd) {
 
 tbody tr:nth-child(even) {
   background-color: #fff9f9;
+}
+
+.result-info {
+  display: none;
 }
 
 tr.result-info:nth-last-child(-n + 2) {
