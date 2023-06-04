@@ -57,9 +57,11 @@ window.addEventListener("DOMContentLoaded", () => {
                 "ea.tracking.id",
                 "fbclid",
                 "gclid",
+                "linkID",
                 "mailId",
                 "msclkid",
                 "mc_cid",
+                "mcID",
                 "mc_eid",
             ];
 
