@@ -19,8 +19,9 @@ import (
 )
 
 var (
-	formTemplate   *template.Template
-	resultTemplate *template.Template
+	formTemplate     *template.Template
+	resultTemplate   *template.Template
+	thereWasATimeout bool
 )
 
 type Hop struct {
@@ -107,6 +108,9 @@ func main() {
 		// Handle the request
 		traceHandler(w, r, config)
 	})
+	http.HandleFunc("/timeout/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "static/timeout.html")
+	})
 	http.HandleFunc("/static/css/", cssHandler)
 	http.HandleFunc("/static/js/", jsHandler)
 	http.HandleFunc("/static/data/", dataHandler)
@@ -131,6 +135,13 @@ func GenerateNonce() (string, error) {
 	nonce := base64.StdEncoding.EncodeToString(nonceBytes)
 
 	return nonce, nil
+}
+
+func doTimeout(w http.ResponseWriter, r *http.Request) {
+	thereWasATimeout = true
+	// Set the Content-Type header to "application/json"
+	w.Header().Set("Content-Type", "text/html")
+	http.Redirect(w, r, "/timeout", http.StatusFound)
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request, config *Config) {
@@ -183,6 +194,9 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
+	// No timeouts, yet.
+	thereWasATimeout = false
+
 	// Increment the UseCount
 	config.UseCount++
 	fmt.Println("Updated UseCount:", config.UseCount)
@@ -226,7 +240,7 @@ func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 	sanitizedURL := bluemonday.UGCPolicy().Sanitize(rawURL)
 	fixedSanitizedURL := strings.ReplaceAll(sanitizedURL, "&amp;", "&")
 
-	redirectURL, hops, err := followRedirects(fixedSanitizedURL)
+	redirectURL, hops, err := followRedirects(fixedSanitizedURL, w, r)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error following redirects: %s", err), http.StatusInternalServerError)
 		return
@@ -254,11 +268,16 @@ func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 		Nonce:        nonce,
 	}
 
-	resultTemplate.Execute(w, data)
+	if !thereWasATimeout {
+		resultTemplate.Execute(w, data)
+	}
 }
 
-func followRedirects(urlStr string) (string, []Hop, error) {
+func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (string, []Hop, error) {
 	client := &http.Client{
+		Transport: &http.Transport{
+			ResponseHeaderTimeout: 7 * time.Second,
+		},
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			// Stop following redirects after the first hop
 			if len(via) >= 1 {
@@ -284,6 +303,10 @@ func followRedirects(urlStr string) (string, []Hop, error) {
 
 		resp, err := client.Do(req)
 		if err != nil {
+			if err, ok := err.(*url.Error); ok && err.Timeout() {
+				doTimeout(w, r)
+				return "", nil, nil
+			}
 			return "", nil, fmt.Errorf("error accessing URL: %s", err)
 		}
 		defer resp.Body.Close()

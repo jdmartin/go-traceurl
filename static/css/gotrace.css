@@ -326,3 +326,23 @@ tr.result-info:nth-last-child(-n + 2) {
 tr.result-info-start {
   border-top: 2px solid black;
 }
+
+/* timeout.html */
+.timeout-body {
+  background-color: #6f6a6a !important;
+}
+
+.timeout-container {
+  color: white;
+  width: 80%;
+  margin: 10% auto;
+}
+
+.timeout-container p {
+  font-size: larger;
+  font-family: Georgia, 'Times New Roman', Times, serif;
+}
+.timeout-controls {
+  display: inline-block;
+  margin-top: 4%;
+}

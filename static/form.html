@@ -11,7 +11,8 @@
 		<div class="form-container">
 			<h2>Where does this URL go?</h2>
 			<form id="traceForm" action="/trace" method="post" autocomplete="off">
-				<input type="text" id="urlInput" name="url" placeholder="Enter URL here..." autocorrect="off" autocapitalize="off" spellcheck="false" required>
+				<input type="text" id="urlInput" name="url" placeholder="Enter URL here..." autocorrect="off"
+					autocapitalize="off" spellcheck="false" required>
 				<input type="submit" id="traceButton" value="Trace URL">
 			</form>
 			<span id="antiqueCounter">Times Used Since Last Build: {{ .UseCount }}</span>
