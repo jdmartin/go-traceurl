@@ -5,12 +5,14 @@ import (
 	"encoding/base64"
 	"fmt"
 	"html/template"
+	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/microcosm-cc/bluemonday"
 )
 
@@ -52,6 +54,25 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Set the Content-Type header to "application/json"
 	w.Header().Set("Content-Type", "application/json")
+}
+
+func extractRedirectURLFromHTML(htmlString string) (string, error) {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(htmlString))
+	if err != nil {
+		return "", fmt.Errorf("error parsing HTML: %s", err)
+	}
+
+	scriptTag := doc.Find("script").First()
+	if scriptTag.Length() == 0 {
+		return "", fmt.Errorf("no <script> tag found")
+	}
+
+	redirectURL := scriptTag.Text()
+	// Extract the value of redirecturl from the JavaScript code
+	redirectURL = strings.Split(redirectURL, "redirecturl = '")[1]
+	redirectURL = strings.Split(redirectURL, "';")[0]
+
+	return redirectURL, nil
 }
 
 func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (string, []Hop, error) {
@@ -101,10 +122,25 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 		hops = append(hops, hop)
 
 		if resp.StatusCode >= 300 && resp.StatusCode <= 399 {
-			// Handle redirect
 			location := resp.Header.Get("Location")
 			if location == "" {
-				return "", []Hop{}, nil // Return empty slice of Hop when redirect location is not found
+				if strings.Contains(resp.Header.Get("Server"), "cloudflare") {
+					bodyBytes, err := io.ReadAll(resp.Body)
+					if err != nil {
+						return "", nil, fmt.Errorf("error reading response body: %s", err)
+					}
+
+					htmlString := string(bodyBytes)
+					redirectURL, err := extractRedirectURLFromHTML(htmlString)
+					if err != nil {
+						return "", nil, fmt.Errorf("error extracting redirect URL from HTML: %s", err)
+					}
+
+					urlStr = redirectURL
+					number++
+					continue
+				}
+				return "", []Hop{}, nil
 			}
 
 			redirectURL, err := handleRelativeRedirect(previousURL, location)
@@ -132,7 +168,6 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 			urlStr = redirectURL
 			number++
 
-			// Update previousURL with the current URL
 			previousURL, err = url.Parse(urlStr)
 			if err != nil {
 				return "", nil, fmt.Errorf("error parsing URL: %s", err)
