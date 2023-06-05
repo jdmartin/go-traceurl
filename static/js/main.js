@@ -19,6 +19,9 @@ window.addEventListener("DOMContentLoaded", () => {
             let goodParams = "";
             let additionalText = "";
 
+            let anchorUrl = new URL(url)
+            let anchor = anchorUrl.hash;
+
             // Split the URL on the last slash
             const lastSlashIndex = url.lastIndexOf("/") + 1;
             const path = url.substring(lastSlashIndex);
@@ -35,19 +38,22 @@ window.addEventListener("DOMContentLoaded", () => {
                     if (filterTheParams(key)) {
                         goodParams += `&${key}=${value}`;
                     }
-                } else {
-                    additionalText += segment;
+                    else {
+                        additionalText += segment;
+                    }
                 }
-            }
+                // Let's just make sure the first character in goodParams is a ?
+                if (goodParams.slice(1).length > 0) {
+                    additionalText += "?" + goodParams.slice(1);
+                }
 
-            // Let's just make sure the first character in goodParams is a ?
-            if (goodParams.slice(1).length > 0) {
-                additionalText += "?" + goodParams.slice(1);
-            }
+                if (anchor) {
+                    additionalText += anchor;
+                }
 
-            return additionalText;
+                return additionalText;
+            }
         }
-
         function filterTheParams(param) {
             // List of known bad parts to discard
             const badParts = [
@@ -107,7 +113,8 @@ window.addEventListener("DOMContentLoaded", () => {
 
         // Sanitize the newHref using DOMPurify
         const sanitizedHref = DOMPurify.sanitize(newHref);
-        const fixedURL = sanitizedHref.replace(/%3F/g, '?');
+        var fixedURL = sanitizedHref.replace(/%3F/g, '?');
+        fixedURL = fixedURL.replace(/%23/g, '#');
 
         anchorElement.setAttribute("href", fixedURL);
         anchorElement.setAttribute("target", "_blank");
