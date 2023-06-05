@@ -38,45 +38,12 @@ func doTimeout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/timeout", http.StatusFound)
 }
 
-func homeHandler(w http.ResponseWriter, r *http.Request, config *Config) {
-	nonce, err := GenerateNonce()
-	if err != nil {
-		fmt.Println("Failed to generate nonce:", err)
-	}
-
-	// Set security headers
-	w.Header().Set("Content-Security-Policy", fmt.Sprintf("default-src 'self'; script-src 'nonce-%s'", nonce))
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("X-Frame-Options", "SAMEORIGIN")
-
-	if r.Method == "GET" {
-		data := struct {
-			Nonce    string
-			UseCount int
-		}{
-			Nonce:    nonce, // Pass the nonce value to the template data
-			UseCount: config.UseCount,
-		}
-		formTemplate.Execute(w, data)
-	} else {
-		http.Redirect(w, r, "/", http.StatusFound)
-	}
-}
-
 func cssHandler(w http.ResponseWriter, r *http.Request) {
 	filePath := "static/css/" + strings.TrimPrefix(r.URL.Path, "/static/css/")
 	http.ServeFile(w, r, filePath)
 
 	// Set the Content-Type header to "text/css"
 	w.Header().Set("Content-Type", "text/css")
-}
-
-func jsHandler(w http.ResponseWriter, r *http.Request) {
-	filePath := "static/js/" + strings.TrimPrefix(r.URL.Path, "/static/js/")
-	http.ServeFile(w, r, filePath)
-
-	// Set the Content-Type header to "application/javascript"
-	w.Header().Set("Content-Type", "application/javascript")
 }
 
 func dataHandler(w http.ResponseWriter, r *http.Request) {
@@ -87,90 +54,10 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 }
 
-func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
-	// No timeouts, yet.
-	thereWasATimeout = false
-
-	// Increment the UseCount
-	config.UseCount++
-	fmt.Println("Updated UseCount:", config.UseCount)
-
-	nonce, err := GenerateNonce()
-	if err != nil {
-		fmt.Println("Failed to generate nonce:", err)
-	}
-
-	// Set security headers
-	w.Header().Set("Content-Security-Policy", fmt.Sprintf("default-src 'self'; script-src 'nonce-%s'", nonce))
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("X-Frame-Options", "SAMEORIGIN")
-
-	var rawURL string
-	if r.Method == "POST" {
-		rawURL = r.FormValue("url")
-	} else if r.Method == "GET" {
-		token := r.URL.Query().Get("token")
-		if token != "" && token == os.Getenv("GET_TOKEN") {
-			rawURL = r.URL.Query().Get("url")
-		}
-	} else {
-		http.Redirect(w, r, "/", http.StatusFound)
-	}
-
-	// Validate the URL format
-	parsedURL, err := url.ParseRequestURI(rawURL)
-	if err != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") || parsedURL.Host == "" || !parsedURL.IsAbs() {
-		http.Error(w, "Invalid URL format", http.StatusBadRequest)
-		return
-	}
-
-	// Check if the URL parameter contains the server name
-	if strings.Contains(parsedURL.Host, r.Host) {
-		http.Error(w, "Redirecting to URLs within the same server is not allowed", http.StatusBadRequest)
-		return
-	}
-
-	// Sanitize URL input using bluemonday
-	sanitizedURL := bluemonday.UGCPolicy().Sanitize(rawURL)
-	fixedSanitizedURL := strings.ReplaceAll(sanitizedURL, "&amp;", "&")
-
-	redirectURL, hops, err := followRedirects(fixedSanitizedURL, w, r)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("Error following redirects: %s", err), http.StatusInternalServerError)
-		return
-	}
-
-	lastIndex := len(hops) - 1
-
-	var finalStatusCode int
-	var finalMessage string
-
-	if lastIndex >= 0 {
-		finalStatusCode = hops[lastIndex].StatusCode
-	} else {
-		finalStatusCode = http.StatusInternalServerError
-		finalMessage = "Redirect Location Not Provided By Headers"
-		hops = append(hops, Hop{Number: 1, URL: rawURL, StatusCode: finalStatusCode, StatusCodeClass: getStatusCodeClass(finalStatusCode)})
-	}
-
-	data := ResultData{
-		RedirectURL:  redirectURL,
-		Hops:         hops,
-		LastIndex:    lastIndex,
-		StatusCode:   finalStatusCode,
-		FinalMessage: template.HTML(finalMessage),
-		Nonce:        nonce,
-	}
-
-	if !thereWasATimeout {
-		resultTemplate.Execute(w, data)
-	}
-}
-
 func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (string, []Hop, error) {
 	client := &http.Client{
 		Transport: &http.Transport{
-			ResponseHeaderTimeout: 7 * time.Second,
+			ResponseHeaderTimeout: 5 * time.Second,
 		},
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			// Stop following redirects after the first hop
@@ -257,6 +144,21 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 	}
 }
 
+func getStatusCodeClass(statusCode int) string {
+	switch {
+	case statusCode >= 200 && statusCode < 300:
+		return "2xx"
+	case statusCode >= 300 && statusCode < 400:
+		return "3xx"
+	case statusCode >= 400 && statusCode < 500:
+		return "4xx"
+	case statusCode >= 500 && statusCode < 600:
+		return "5xx"
+	default:
+		return ""
+	}
+}
+
 func handleRelativeRedirect(previousURL *url.URL, location string) (string, error) {
 	redirectURL, err := url.Parse(location)
 	if err != nil {
@@ -284,17 +186,115 @@ func handleRelativeRedirect(previousURL *url.URL, location string) (string, erro
 	return absoluteURL, nil
 }
 
-func getStatusCodeClass(statusCode int) string {
-	switch {
-	case statusCode >= 200 && statusCode < 300:
-		return "2xx"
-	case statusCode >= 300 && statusCode < 400:
-		return "3xx"
-	case statusCode >= 400 && statusCode < 500:
-		return "4xx"
-	case statusCode >= 500 && statusCode < 600:
-		return "5xx"
-	default:
-		return ""
+func homeHandler(w http.ResponseWriter, r *http.Request, config *Config) {
+	nonce, err := GenerateNonce()
+	if err != nil {
+		fmt.Println("Failed to generate nonce:", err)
+	}
+
+	// Set security headers
+	w.Header().Set("Content-Security-Policy", fmt.Sprintf("default-src 'self'; script-src 'nonce-%s'", nonce))
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("X-Frame-Options", "SAMEORIGIN")
+
+	if r.Method == "GET" {
+		data := struct {
+			Nonce    string
+			UseCount int
+		}{
+			Nonce:    nonce, // Pass the nonce value to the template data
+			UseCount: config.UseCount,
+		}
+		formTemplate.Execute(w, data)
+	} else {
+		http.Redirect(w, r, "/", http.StatusFound)
+	}
+}
+
+func jsHandler(w http.ResponseWriter, r *http.Request) {
+	filePath := "static/js/" + strings.TrimPrefix(r.URL.Path, "/static/js/")
+	http.ServeFile(w, r, filePath)
+
+	// Set the Content-Type header to "application/javascript"
+	w.Header().Set("Content-Type", "application/javascript")
+}
+
+func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
+	// No timeouts, yet.
+	thereWasATimeout = false
+
+	// Increment the UseCount
+	config.UseCount++
+	fmt.Println("Updated UseCount:", config.UseCount)
+
+	nonce, err := GenerateNonce()
+	if err != nil {
+		fmt.Println("Failed to generate nonce:", err)
+	}
+
+	// Set security headers
+	w.Header().Set("Content-Security-Policy", fmt.Sprintf("default-src 'self'; script-src 'nonce-%s'", nonce))
+	w.Header().Set("X-Content-Type-Options", "nosniff")
+	w.Header().Set("X-Frame-Options", "SAMEORIGIN")
+
+	var rawURL string
+	if r.Method == "POST" {
+		rawURL = r.FormValue("url")
+	} else if r.Method == "GET" {
+		token := r.URL.Query().Get("token")
+		if token != "" && token == os.Getenv("GET_TOKEN") {
+			rawURL = r.URL.Query().Get("url")
+		}
+	} else {
+		http.Redirect(w, r, "/", http.StatusFound)
+	}
+
+	// Validate the URL format
+	parsedURL, err := url.ParseRequestURI(rawURL)
+	if err != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") || parsedURL.Host == "" || !parsedURL.IsAbs() {
+		http.Error(w, "Invalid URL format", http.StatusBadRequest)
+		return
+	}
+
+	// Check if the URL parameter contains the server name
+	if strings.Contains(parsedURL.Host, r.Host) {
+		http.Error(w, "Redirecting to URLs within the same server is not allowed", http.StatusBadRequest)
+		return
+	}
+
+	// Sanitize URL input using bluemonday
+	sanitizedURL := bluemonday.UGCPolicy().Sanitize(rawURL)
+	fixedSanitizedURL := strings.ReplaceAll(sanitizedURL, "&amp;", "&")
+
+	redirectURL, hops, err := followRedirects(fixedSanitizedURL, w, r)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Error following redirects: %s", err), http.StatusInternalServerError)
+		return
+	}
+
+	lastIndex := len(hops) - 1
+
+	var finalStatusCode int
+	var finalMessage string
+
+	if lastIndex >= 0 {
+		finalStatusCode = hops[lastIndex].StatusCode
+	} else {
+		finalStatusCode = http.StatusInternalServerError
+		finalMessage = "Redirect Location Not Provided By Headers"
+		hops = append(hops, Hop{Number: 1, URL: rawURL, StatusCode: finalStatusCode, StatusCodeClass: getStatusCodeClass(finalStatusCode)})
+	}
+
+	data := ResultData{
+		RedirectURL:  redirectURL,
+		Hops:         hops,
+		LastIndex:    lastIndex,
+		StatusCode:   finalStatusCode,
+		FinalMessage: template.HTML(finalMessage),
+		Nonce:        nonce,
+	}
+
+	if !thereWasATimeout {
+		resultTemplate.Execute(w, data)
 	}
 }
