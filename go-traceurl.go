@@ -13,6 +13,7 @@ import (
 )
 
 var (
+	cloudflareStatus bool
 	formTemplate     *template.Template
 	resultTemplate   *template.Template
 	thereWasATimeout bool
@@ -26,12 +27,13 @@ type Hop struct {
 }
 
 type ResultData struct {
-	RedirectURL  string
-	Hops         []Hop
-	LastIndex    int
-	StatusCode   int
-	FinalMessage template.HTML
-	Nonce        string
+	CloudflareStatus bool
+	RedirectURL      string
+	Hops             []Hop
+	LastIndex        int
+	StatusCode       int
+	FinalMessage     template.HTML
+	Nonce            string
 }
 
 type Config struct {
