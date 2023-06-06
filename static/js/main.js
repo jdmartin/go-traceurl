@@ -59,6 +59,8 @@ window.addEventListener("DOMContentLoaded", () => {
                 "ck_subscriber_id",
                 "cmpid",
                 "ea.tracking.id",
+                "EMLCID",
+                "EMLDTL",
                 "fbclid",
                 "gclid",
                 "linkID",
@@ -67,6 +69,8 @@ window.addEventListener("DOMContentLoaded", () => {
                 "mc_cid",
                 "mcID",
                 "mc_eid",
+                "mgparam",
+                "rfrr",
             ];
 
             const isBadPart =
@@ -110,11 +114,17 @@ window.addEventListener("DOMContentLoaded", () => {
 
         // Sanitize the newHref using DOMPurify
         const sanitizedHref = DOMPurify.sanitize(newHref);
-        const anchoredHref = sanitizedHref
-        const fixedURL = anchoredHref.replace(/%3F/g, '?');
+        const fixedURL = sanitizedHref.replace(/%3F/g, '?');
 
+        // Make sure anchor is in the href, if needed.
+        if (!fixedURL.includes(anchor)) {
+            const anchoredHref = `${fixedURL}${anchor}`;
+            anchorElement.setAttribute("href", anchoredHref);
+        } else {
+            const anchoredHref = `${fixedURL}`
+            anchorElement.setAttribute("href", anchoredHref);
+        }
 
-        anchorElement.setAttribute("href", fixedURL);
         anchorElement.setAttribute("target", "_blank");
         if (!goodParamString.includes(anchor) && !baseUrl.includes(anchor)) {
             anchorElement.textContent = `${baseUrl}${goodParamString}${anchor}`;
