@@ -1,26 +1,24 @@
 // Parse and Clean the Final URL
 window.addEventListener("DOMContentLoaded", () => {
     const finalHop = document.querySelector("#final-hop");
-
-    // We only want the link to work after it's cleaned. We re-enable at the bottom.
-    const finalHopLink = document.querySelector("#final-hop a");
-    finalHopLink.removeAttribute("href");
-
     const removedParamsSpan = document.querySelector("#removed-params");
 
     if (finalHop) {
+        let finalHopLink;
+        // We only want the link to work after it's cleaned. We re-enable at the bottom.
+        finalHopLink = finalHop.querySelector("a");
+        finalHopLink.removeAttribute("href");
         // Extract the URL from the final hop
         const url = finalHop.querySelector("a").textContent;
         const lastSlashIndex = url.lastIndexOf("/");
         const baseUrl = url.substring(0, lastSlashIndex + 1);
         const removedParams = [];
+        const preAnchor = new URL(url);
+        const anchor = preAnchor.hash;
 
         function extractParameters(url) {
             let goodParams = "";
             let additionalText = "";
-
-            let anchorUrl = new URL(url)
-            let anchor = anchorUrl.hash;
 
             // Split the URL on the last slash
             const lastSlashIndex = url.lastIndexOf("/") + 1;
@@ -38,22 +36,21 @@ window.addEventListener("DOMContentLoaded", () => {
                     if (filterTheParams(key)) {
                         goodParams += `&${key}=${value}`;
                     }
-                    else {
-                        additionalText += segment;
-                    }
+                } else if (segment.startsWith("#")) {
+                    continue
+                } else {
+                    additionalText += segment;
                 }
-                // Let's just make sure the first character in goodParams is a ?
-                if (goodParams.slice(1).length > 0) {
-                    additionalText += "?" + goodParams.slice(1);
-                }
-
-                if (anchor) {
-                    additionalText += anchor;
-                }
-
-                return additionalText;
             }
+
+            // Let's just make sure the first character in goodParams is a ?
+            if (goodParams.slice(1).length > 0) {
+                additionalText += "?" + goodParams.slice(1);
+            }
+
+            return additionalText;
         }
+
         function filterTheParams(param) {
             // List of known bad parts to discard
             const badParts = [
@@ -113,12 +110,17 @@ window.addEventListener("DOMContentLoaded", () => {
 
         // Sanitize the newHref using DOMPurify
         const sanitizedHref = DOMPurify.sanitize(newHref);
-        var fixedURL = sanitizedHref.replace(/%3F/g, '?');
-        fixedURL = fixedURL.replace(/%23/g, '#');
+        const anchoredHref = sanitizedHref
+        const fixedURL = anchoredHref.replace(/%3F/g, '?');
+
 
         anchorElement.setAttribute("href", fixedURL);
         anchorElement.setAttribute("target", "_blank");
-        anchorElement.textContent = `${baseUrl}${goodParamString}`;
+        if (!goodParamString.includes(anchor) && !baseUrl.includes(anchor)) {
+            anchorElement.textContent = `${baseUrl}${goodParamString}${anchor}`;
+        } else {
+            anchorElement.textContent = `${baseUrl}${goodParamString}`;
+        }
 
         // Replace the existing finalHop content with the modified URL
         finalHop.innerHTML = ""; // Clear any existing content
@@ -192,59 +194,71 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // Provide download to JSON
 window.addEventListener("DOMContentLoaded", async () => {
-    document.getElementById("downloadButton").addEventListener("click", function () {
-        // Get all table rows except those with the "result-info" class
-        var rows = Array.from(document.querySelectorAll("#resultTable tbody tr:not(.result-info)"));
+    if (document.getElementById("downloadButton")) {
+        document.getElementById("downloadButton").addEventListener("click", function () {
+            // Get all table rows except those with the "result-info" class
+            var rows = Array.from(document.querySelectorAll("#resultTable tbody tr:not(.result-info)"));
 
-        // Prepare an array to store the hops
-        var hops = [];
+            // Prepare an array to store the hops
+            var hops = [];
 
-        // Loop through each row and extract the relevant values
-        rows.forEach(function (row) {
-            var cells = row.getElementsByTagName("td");
-            var status = cells[1].textContent.trim();
-            var cleanStatus = status.replace(/\D/g, '');
+            // Loop through each row and extract the relevant values
+            rows.forEach(function (row) {
+                var cells = row.getElementsByTagName("td");
+                var status = cells[1].textContent.trim();
+                var cleanStatus = status.replace(/\D/g, '');
 
-            var hop = {
-                "Hop": cells[0].textContent.trim(),
-                "Status": cleanStatus,
-                "URL": cells[2].textContent.trim()
+                var hop = {
+                    "Hop": cells[0].textContent.trim(),
+                    "Status": cleanStatus,
+                    "URL": cells[2].textContent.trim()
+                };
+                hops.push(hop);
+            });
+
+            // Extract result-info rows data
+            var rawFinalURL = document.querySelector(".rawFinalUrl").nextSibling.textContent.trim();
+            var removedParams = document.getElementById("removed-params").textContent;
+
+            // Convert the removedParams string to an array
+            var removedParamsArray = removedParams.split(',').map(function (param) {
+                return param.trim();
+            });
+
+            // Prepare the Results object
+            var meta = {
+                "rawFinalURL": rawFinalURL || null,
+                "removedParams": removedParamsArray || null,
             };
-            hops.push(hop);
+
+            // Construct the final JSON structure
+            var jsonData = {
+                "Results": hops,
+                "Meta": meta
+            };
+
+            // Convert the data to JSON
+            var jsonString = JSON.stringify(jsonData, null, 2);
+
+            // Create a download link and trigger the download
+            var element = document.createElement("a");
+            element.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(jsonString));
+            element.setAttribute("download", "gotrace_data.json");
+            element.style.display = "none";
+            document.body.appendChild(element);
+            element.click();
+            document.body.removeChild(element);
         });
+    } else {
+        const controlsContainers = document.getElementsByClassName("controls-container");
 
-        // Extract result-info rows data
-        var rawFinalURL = document.querySelector(".rawFinalUrl").nextSibling.textContent.trim();
-        console.log(rawFinalURL)
-        var removedParams = document.getElementById("removed-params").textContent;
+        // Iterate over each controls-container element
+        for (let i = 0; i < controlsContainers.length; i++) {
+            const controlsContainer = controlsContainers[i];
 
-        // Convert the removedParams string to an array
-        var removedParamsArray = removedParams.split(',').map(function (param) {
-            return param.trim();
-        });
-
-        // Prepare the Results object
-        var meta = {
-            "rawFinalURL": rawFinalURL || null,
-            "removedParams": removedParamsArray || null,
-        };
-
-        // Construct the final JSON structure
-        var jsonData = {
-            "Results": hops,
-            "Meta": meta
-        };
-
-        // Convert the data to JSON
-        var jsonString = JSON.stringify(jsonData, null, 2);
-
-        // Create a download link and trigger the download
-        var element = document.createElement("a");
-        element.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(jsonString));
-        element.setAttribute("download", "gotrace_data.json");
-        element.style.display = "none";
-        document.body.appendChild(element);
-        element.click();
-        document.body.removeChild(element);
-    });
+            // Set the right property to 11%
+            controlsContainer.style.right = "7.5%";
+            controlsContainer.style.display = "inline";
+        }
+    }
 })

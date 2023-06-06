@@ -32,13 +32,14 @@
 							<span class="status-code">
 								<span id="status-button"
 									class="status-code-{{$hop.StatusCodeClass}}">{{$hop.StatusCode}}</span>
-									<span class="info-icon">?<span class="tooltip"></span></span>
+								<span class="info-icon">?<span class="tooltip"></span></span>
 							</span>
 						</span>
 					</td>
 					<td>
 						{{if eq $i $.LastIndex}}
-						<span id="final-hop"><a href="{{.URL}}" target="_blank" rel="noopener noreferrer">{{.URL}}</a></span>
+						<span id="final-hop"><a href="{{.URL}}" target="_blank"
+								rel="noopener noreferrer">{{.URL}}</a></span>
 						{{else}}
 						<span class="inert-link">{{.URL}}</span>
 						{{end}}
@@ -53,23 +54,40 @@
 				<tr class="result-info">
 					<td></td>
 					<td></td>
-					<td><span>🧙 <strong>Parameters Removed from Destination URL:</strong> <span id="removed-params"></span></span></td>
+					<td><span>🧙 <strong>Parameters Removed from Destination URL:</strong> <span
+								id="removed-params"></span></span></td>
 				</tr>
 				{{if ne .FinalMessage ""}}
 				<tr class="result-info">
 					<td></td>
 					<td></td>
-					<td><span class="final-message">🥷 <strong>Secret:</strong> {{.FinalMessage}}</span></td>
+					{{if $.CloudflareStatus}}
+						<td><span class="final-message">🥷 <strong>Secret:</strong> Broken by CloudFlare using JS for redirects instead of headers.</span></td>
+					{{else}}
+						<td><span class="final-message">🥷 <strong>Secret:</strong> {{.FinalMessage}}</span></td>
+					{{end}}
 				</tr>
 				{{end}}
 			</tbody>
 		</table>
 	</div>
-		<div class="controls-container">
-			<button class="button-3 meta-button" role="button" id="toggleButton">Toggle Meta</button>
-			<button class="button-3 dl-button" role="button" id="downloadButton">Download as JSON</button>
-			<button class="button-3" role="button"><a href="/">Trace another URL</a></button>
-		</div>
+	{{if $.CloudflareStatus}}
+	<div class="controls-container">
+		<button class="button-3 meta-button" role="button" id="toggleButton">Toggle Meta</button>
+		{{if ne .CloudflareStatus true}}
+		<button class="button-3 dl-button" role="button" id="downloadButton">Download as JSON</button>
+		{{end}}
+		<button class="button-3" role="button"><a href="/">Trace another URL</a></button>
+	</div>
+	{{else}}
+	<div class="controls-container">
+		<button class="button-3 meta-button" role="button" id="toggleButton">Toggle Meta</button>
+		{{if ne .CloudflareStatus true}}
+		<button class="button-3 dl-button" role="button" id="downloadButton">Download as JSON</button>
+		{{end}}
+		<button class="button-3" role="button"><a href="/">Trace another URL</a></button>
+	</div>
+	{{end}}
 </body>
 
 </html>

@@ -5,14 +5,12 @@ import (
 	"encoding/base64"
 	"fmt"
 	"html/template"
-	"io"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/PuerkitoBio/goquery"
 	"github.com/microcosm-cc/bluemonday"
 )
 
@@ -56,26 +54,10 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 }
 
-func extractRedirectURLFromHTML(htmlString string) (string, error) {
-	doc, err := goquery.NewDocumentFromReader(strings.NewReader(htmlString))
-	if err != nil {
-		return "", fmt.Errorf("error parsing HTML: %s", err)
-	}
-
-	scriptTag := doc.Find("script").First()
-	if scriptTag.Length() == 0 {
-		return "", fmt.Errorf("no <script> tag found")
-	}
-
-	redirectURL := scriptTag.Text()
-	// Extract the value of redirecturl from the JavaScript code
-	redirectURL = strings.Split(redirectURL, "redirecturl = '")[1]
-	redirectURL = strings.Split(redirectURL, "';")[0]
-
-	return redirectURL, nil
-}
-
 func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (string, []Hop, error) {
+	// CF didn't break anything yet.
+	cloudflareStatus = false
+
 	client := &http.Client{
 		Transport: &http.Transport{
 			ResponseHeaderTimeout: 5 * time.Second,
@@ -125,22 +107,9 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 			location := resp.Header.Get("Location")
 			if location == "" {
 				if strings.Contains(resp.Header.Get("Server"), "cloudflare") {
-					bodyBytes, err := io.ReadAll(resp.Body)
-					if err != nil {
-						return "", nil, fmt.Errorf("error reading response body: %s", err)
-					}
-
-					htmlString := string(bodyBytes)
-					redirectURL, err := extractRedirectURLFromHTML(htmlString)
-					if err != nil {
-						return "", nil, fmt.Errorf("error extracting redirect URL from HTML: %s", err)
-					}
-
-					urlStr = redirectURL
-					number++
-					continue
+					cloudflareStatus = true
 				}
-				return "", []Hop{}, nil
+				return "", []Hop{}, nil // Return empty slice of Hop when redirect location is not found
 			}
 
 			redirectURL, err := handleRelativeRedirect(previousURL, location)
@@ -321,12 +290,13 @@ func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 	}
 
 	data := ResultData{
-		RedirectURL:  redirectURL,
-		Hops:         hops,
-		LastIndex:    lastIndex,
-		StatusCode:   finalStatusCode,
-		FinalMessage: template.HTML(finalMessage),
-		Nonce:        nonce,
+		RedirectURL:      redirectURL,
+		Hops:             hops,
+		LastIndex:        lastIndex,
+		StatusCode:       finalStatusCode,
+		FinalMessage:     template.HTML(finalMessage),
+		Nonce:            nonce,
+		CloudflareStatus: cloudflareStatus,
 	}
 
 	if !thereWasATimeout {
