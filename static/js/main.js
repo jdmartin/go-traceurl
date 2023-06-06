@@ -43,6 +43,11 @@ window.addEventListener("DOMContentLoaded", () => {
                 }
             }
 
+            // Add anchor as needed
+            if (anchor) {
+                additionalText += anchor;
+            }
+
             // Let's just make sure the first character in goodParams is a ?
             if (goodParams.slice(1).length > 0) {
                 additionalText += "?" + goodParams.slice(1);
@@ -114,23 +119,12 @@ window.addEventListener("DOMContentLoaded", () => {
 
         // Sanitize the newHref using DOMPurify
         const sanitizedHref = DOMPurify.sanitize(newHref);
-        const fixedURL = sanitizedHref.replace(/%3F/g, '?');
+        const fixedURL = sanitizedHref.replace(/%3F/g, '?').replace(/%32/g, '#');
 
-        // Make sure anchor is in the href, if needed.
-        if (!fixedURL.includes(anchor)) {
-            const anchoredHref = `${fixedURL}${anchor}`;
-            anchorElement.setAttribute("href", anchoredHref);
-        } else {
-            const anchoredHref = `${fixedURL}`
-            anchorElement.setAttribute("href", anchoredHref);
-        }
 
+        anchorElement.setAttribute("href", fixedURL);
         anchorElement.setAttribute("target", "_blank");
-        if (!goodParamString.includes(anchor) && !baseUrl.includes(anchor)) {
-            anchorElement.textContent = `${baseUrl}${goodParamString}${anchor}`;
-        } else {
-            anchorElement.textContent = `${baseUrl}${goodParamString}`;
-        }
+        anchorElement.textContent = `${baseUrl}${goodParamString}`;
 
         // Replace the existing finalHop content with the modified URL
         finalHop.innerHTML = ""; // Clear any existing content
