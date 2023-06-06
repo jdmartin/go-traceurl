@@ -43,6 +43,11 @@ window.addEventListener("DOMContentLoaded", () => {
                 }
             }
 
+            // Add anchor as needed
+            if (anchor) {
+                additionalText += anchor;
+            }
+
             // Let's just make sure the first character in goodParams is a ?
             if (goodParams.slice(1).length > 0) {
                 additionalText += "?" + goodParams.slice(1);
@@ -59,6 +64,8 @@ window.addEventListener("DOMContentLoaded", () => {
                 "ck_subscriber_id",
                 "cmpid",
                 "ea.tracking.id",
+                "EMLCID",
+                "EMLDTL",
                 "fbclid",
                 "gclid",
                 "linkID",
@@ -67,6 +74,8 @@ window.addEventListener("DOMContentLoaded", () => {
                 "mc_cid",
                 "mcID",
                 "mc_eid",
+                "mgparam",
+                "rfrr",
             ];
 
             const isBadPart =
@@ -110,17 +119,12 @@ window.addEventListener("DOMContentLoaded", () => {
 
         // Sanitize the newHref using DOMPurify
         const sanitizedHref = DOMPurify.sanitize(newHref);
-        const anchoredHref = sanitizedHref
-        const fixedURL = anchoredHref.replace(/%3F/g, '?');
+        const fixedURL = sanitizedHref.replace(/%3F/g, '?').replace(/%32/g, '#');
 
 
         anchorElement.setAttribute("href", fixedURL);
         anchorElement.setAttribute("target", "_blank");
-        if (!goodParamString.includes(anchor) && !baseUrl.includes(anchor)) {
-            anchorElement.textContent = `${baseUrl}${goodParamString}${anchor}`;
-        } else {
-            anchorElement.textContent = `${baseUrl}${goodParamString}`;
-        }
+        anchorElement.textContent = `${baseUrl}${goodParamString}`;
 
         // Replace the existing finalHop content with the modified URL
         finalHop.innerHTML = ""; // Clear any existing content

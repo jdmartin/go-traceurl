@@ -3,6 +3,7 @@ package main
 import (
 	"crypto/rand"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -112,13 +113,16 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 				return "", []Hop{}, nil // Return empty slice of Hop when redirect location is not found
 			}
 
-			redirectURL, err := handleRelativeRedirect(previousURL, location)
+			redirectURL, err := handleRelativeRedirect(previousURL, location, req.URL)
 			if err != nil {
 				return "", nil, fmt.Errorf("error handling relative redirect: %s", err)
 			}
 
+			// Convert redirectURL to a string
+			redirectURLString := redirectURL.String()
+
 			// Check if the "returnUri" query parameter is present
-			u, err := url.Parse(redirectURL)
+			u, err := url.Parse(redirectURLString)
 			if err != nil {
 				return "", nil, fmt.Errorf("error parsing URL: %s", err)
 			}
@@ -131,10 +135,10 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 				decodedReturnURI = strings.ReplaceAll(decodedReturnURI, "%3A", ":")
 				decodedReturnURI = strings.ReplaceAll(decodedReturnURI, "%2F", "/")
 
-				redirectURL = u.Scheme + "://" + u.Host + u.Path + "?returnUri=" + decodedReturnURI
+				redirectURLString = u.Scheme + "://" + u.Host + u.Path + "?returnUri=" + decodedReturnURI
 			}
 
-			urlStr = redirectURL
+			urlStr = redirectURLString
 			number++
 
 			previousURL, err = url.Parse(urlStr)
@@ -163,31 +167,35 @@ func getStatusCodeClass(statusCode int) string {
 	}
 }
 
-func handleRelativeRedirect(previousURL *url.URL, location string) (string, error) {
+func handleRelativeRedirect(previousURL *url.URL, location string, requestURL *url.URL) (*url.URL, error) {
 	redirectURL, err := url.Parse(location)
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 
-	// Check if the redirect URL is an absolute URL
-	if !redirectURL.IsAbs() {
-		// Use the domain from the previous URL
+	if redirectURL.Scheme == "" {
+		// If the scheme is missing, set it to the scheme of the previous URL or the request URL
 		if previousURL != nil {
 			redirectURL.Scheme = previousURL.Scheme
-			redirectURL.Host = previousURL.Host
+		} else if requestURL != nil {
+			redirectURL.Scheme = requestURL.Scheme
 		} else {
-			// Use the current host
-			currentURL, err := url.Parse(location)
-			if err == nil {
-				redirectURL.Scheme = currentURL.Scheme
-				redirectURL.Host = currentURL.Host
-			} else {
-				return "", err
-			}
+			return nil, errors.New("missing scheme for relative redirect")
 		}
 	}
-	absoluteURL := redirectURL.String()
-	return absoluteURL, nil
+
+	if redirectURL.Host == "" {
+		// If the host is missing, set it to the host of the previous URL or the request URL
+		if previousURL != nil {
+			redirectURL.Host = previousURL.Host
+		} else if requestURL != nil {
+			redirectURL.Host = requestURL.Host
+		} else {
+			return nil, errors.New("missing host for relative redirect")
+		}
+	}
+
+	return redirectURL, nil
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request, config *Config) {
