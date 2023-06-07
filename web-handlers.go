@@ -15,6 +15,14 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 )
 
+// *** Helper Functions ***
+func doTimeout(w http.ResponseWriter, r *http.Request) {
+	thereWasATimeout = true
+	// Set the Content-Type header to "application/json"
+	w.Header().Set("Content-Type", "text/html")
+	http.Redirect(w, r, "/timeout", http.StatusFound)
+}
+
 func GenerateNonce() (string, error) {
 	// Define the desired length of the nonce (in bytes)
 	nonceLength := 16
@@ -32,13 +40,22 @@ func GenerateNonce() (string, error) {
 	return nonce, nil
 }
 
-func doTimeout(w http.ResponseWriter, r *http.Request) {
-	thereWasATimeout = true
-	// Set the Content-Type header to "application/json"
-	w.Header().Set("Content-Type", "text/html")
-	http.Redirect(w, r, "/timeout", http.StatusFound)
+func getStatusCodeClass(statusCode int) string {
+	switch {
+	case statusCode >= 200 && statusCode < 300:
+		return "2xx"
+	case statusCode >= 300 && statusCode < 400:
+		return "3xx"
+	case statusCode >= 400 && statusCode < 500:
+		return "4xx"
+	case statusCode >= 500 && statusCode < 600:
+		return "5xx"
+	default:
+		return ""
+	}
 }
 
+// *** Handlers ***
 func cssHandler(w http.ResponseWriter, r *http.Request) {
 	filePath := "static/css/" + strings.TrimPrefix(r.URL.Path, "/static/css/")
 	http.ServeFile(w, r, filePath)
@@ -160,21 +177,6 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 		}
 
 		return urlStr, hops, nil
-	}
-}
-
-func getStatusCodeClass(statusCode int) string {
-	switch {
-	case statusCode >= 200 && statusCode < 300:
-		return "2xx"
-	case statusCode >= 300 && statusCode < 400:
-		return "3xx"
-	case statusCode >= 400 && statusCode < 500:
-		return "4xx"
-	case statusCode >= 500 && statusCode < 600:
-		return "5xx"
-	default:
-		return ""
 	}
 }
 
