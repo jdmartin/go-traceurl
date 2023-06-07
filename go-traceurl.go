@@ -15,6 +15,7 @@ import (
 var (
 	cloudflareStatus bool
 	formTemplate     *template.Template
+	mode             string
 	resultTemplate   *template.Template
 	thereWasATimeout bool
 )
@@ -53,6 +54,9 @@ func main() {
 	if port == "" {
 		port = "8080"
 	}
+
+	// Detect dev or production mode
+	mode = os.Getenv("MODE")
 
 	// Create a rate limiter with a limit of 1 requests per second
 	lim := tollbooth.NewLimiter(1, &limiter.ExpirableOptions{
@@ -133,11 +137,16 @@ func secureHeaders(next http.Handler) http.Handler {
 			fmt.Println("Failed to generate nonce:", err)
 		}
 
-		w.Header().Set("Content-Security-Policy", fmt.Sprintf("default-src 'self'; script-src 'self' 'nonce-%s'; referrer 'no-referrer'", nonce))
+		w.Header().Set("Content-Security-Policy", fmt.Sprintf("default-src 'self'; script-src 'self' 'nonce-%s'", nonce))
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("X-Frame-Options", "SAMEORIGIN")
 		w.Header().Set("Referrer-Policy", "no-referrer")
 		w.Header().Set("Permissions-Policy", "accelerometer=(), ambient-light-sensor=(), autoplay=(), battery=(), camera=(), cross-origin-isolated=(), display-capture=(), document-domain=(), encrypted-media=(), execution-while-not-rendered=(), execution-while-out-of-viewport=(), fullscreen=(), geolocation=(), gyroscope=(), keyboard-map=(), magnetometer=(), microphone=(), midi=(), navigation-override=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), sync-xhr=(), usb=(), web-share=(), xr-spatial-tracking=()")
+
+		// USE HSTS when in production mode only, because testing.
+		if mode == "production" {
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
+		}
 
 		// Call the next handler
 		next.ServeHTTP(w, r)
