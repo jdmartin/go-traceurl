@@ -41,7 +41,20 @@ type Config struct {
 }
 
 func main() {
-	// Create a rate limiter with a limit of 10 requests per minute
+	// Load the cached value on startup
+	config, err := LoadConfig()
+	if err != nil {
+		fmt.Println("No cached value found.")
+		config = &Config{UseCount: 0}
+	}
+
+	// Make sure we have a port to serve on
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	// Create a rate limiter with a limit of 1 requests per second
 	lim := tollbooth.NewLimiter(1, &limiter.ExpirableOptions{
 		DefaultExpirationTTL: time.Hour,
 	})
@@ -53,17 +66,52 @@ func main() {
 	lim.SetHeaderEntryExpirationTTL(time.Hour)
 
 	// Handle SIGINT signal
+	handleSIGINT(config)
+
+	// Define templates.
+	formTemplate = template.Must(template.ParseFiles("static/form.html"))
+	resultTemplate = template.Must(template.ParseFiles("static/result.html"))
+
+	// Establish Routes
+	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// Limit the request using the rate limiter
+		httpError := tollbooth.LimitByRequest(lim, w, r)
+		if httpError != nil {
+			http.Error(w, httpError.Message, httpError.StatusCode)
+			return
+		}
+		// Handle the request
+		homeHandler(w, r, config)
+	})
+
+	http.HandleFunc("/timeout/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "static/timeout.html")
+	})
+
+	http.HandleFunc("/trace", func(w http.ResponseWriter, r *http.Request) {
+		// Limit the request using the rate limiter
+		httpError := tollbooth.LimitByRequest(lim, w, r)
+		if httpError != nil {
+			http.Error(w, httpError.Message, httpError.StatusCode)
+			return
+		}
+		// Handle the request
+		traceHandler(w, r, config)
+	})
+
+	http.HandleFunc("/static/css/", cssHandler)
+	http.HandleFunc("/static/data/", dataHandler)
+	http.HandleFunc("/static/js/", jsHandler)
+
+	addr := fmt.Sprintf(":%s", port)
+	fmt.Printf("Server listening on http://localhost%s\n", addr)
+	http.ListenAndServe(addr, nil)
+}
+
+func handleSIGINT(config *Config) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
-	// Load the cached value on startup
-	config, err := LoadConfig()
-	if err != nil {
-		fmt.Println("No cached value found.")
-		config = &Config{UseCount: 0}
-	}
-
-	// Listen for SIGINT
 	go func() {
 		<-c
 		fmt.Println("\nReceived SIGINT. Caching the current value...")
@@ -75,43 +123,4 @@ func main() {
 
 		os.Exit(0)
 	}()
-
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
-	formTemplate = template.Must(template.ParseFiles("static/form.html"))
-	resultTemplate = template.Must(template.ParseFiles("static/result.html"))
-
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		// Limit the request using the rate limiter
-		httpError := tollbooth.LimitByRequest(lim, w, r)
-		if httpError != nil {
-			http.Error(w, httpError.Message, httpError.StatusCode)
-			return
-		}
-		// Handle the request
-		homeHandler(w, r, config)
-	})
-	http.HandleFunc("/trace", func(w http.ResponseWriter, r *http.Request) {
-		// Limit the request using the rate limiter
-		httpError := tollbooth.LimitByRequest(lim, w, r)
-		if httpError != nil {
-			http.Error(w, httpError.Message, httpError.StatusCode)
-			return
-		}
-		// Handle the request
-		traceHandler(w, r, config)
-	})
-	http.HandleFunc("/timeout/", func(w http.ResponseWriter, r *http.Request) {
-		http.ServeFile(w, r, "static/timeout.html")
-	})
-	http.HandleFunc("/static/css/", cssHandler)
-	http.HandleFunc("/static/js/", jsHandler)
-	http.HandleFunc("/static/data/", dataHandler)
-
-	addr := fmt.Sprintf(":%s", port)
-	fmt.Printf("Server listening on http://localhost%s\n", addr)
-	http.ListenAndServe(addr, nil)
 }
