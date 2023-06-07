@@ -138,6 +138,17 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 				redirectURLString = u.Scheme + "://" + u.Host + u.Path + "?returnUri=" + decodedReturnURI
 			}
 
+			if redirURI := queryParams.Get("redir"); redirURI != "" {
+				decodedRedirURI, err := url.PathUnescape(redirURI)
+				if err != nil {
+					return "", nil, fmt.Errorf("error decoding redir param: %s", err)
+				}
+				decodedRedirURI = strings.ReplaceAll(decodedRedirURI, "%3A", ":")
+				decodedRedirURI = strings.ReplaceAll(decodedRedirURI, "%2F", "/")
+
+				redirectURLString = u.Scheme + "://" + u.Host + u.Path + "?redir=" + decodedRedirURI
+			}
+
 			urlStr = redirectURLString
 			number++
 
