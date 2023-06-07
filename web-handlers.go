@@ -217,11 +217,6 @@ func homeHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 		fmt.Println("Failed to generate nonce:", err)
 	}
 
-	// Set security headers
-	w.Header().Set("Content-Security-Policy", fmt.Sprintf("default-src 'self'; script-src 'nonce-%s'", nonce))
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("X-Frame-Options", "SAMEORIGIN")
-
 	if r.Method == "GET" {
 		data := struct {
 			Nonce    string
@@ -256,11 +251,6 @@ func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 	if err != nil {
 		fmt.Println("Failed to generate nonce:", err)
 	}
-
-	// Set security headers
-	w.Header().Set("Content-Security-Policy", fmt.Sprintf("default-src 'self'; script-src 'nonce-%s'", nonce))
-	w.Header().Set("X-Content-Type-Options", "nosniff")
-	w.Header().Set("X-Frame-Options", "SAMEORIGIN")
 
 	var rawURL string
 	if r.Method == "POST" {

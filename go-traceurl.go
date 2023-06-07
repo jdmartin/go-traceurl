@@ -105,7 +105,7 @@ func main() {
 
 	addr := fmt.Sprintf(":%s", port)
 	fmt.Printf("Server listening on http://localhost%s\n", addr)
-	http.ListenAndServe(addr, nil)
+	http.ListenAndServe(addr, secureHeaders(http.DefaultServeMux))
 }
 
 func handleSIGINT(config *Config) {
@@ -123,4 +123,22 @@ func handleSIGINT(config *Config) {
 
 		os.Exit(0)
 	}()
+}
+
+// Middleware function to set security headers
+func secureHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		nonce, err := GenerateNonce()
+		if err != nil {
+			fmt.Println("Failed to generate nonce:", err)
+		}
+
+		w.Header().Set("Content-Security-Policy", fmt.Sprintf("default-src 'self'; script-src 'self' 'nonce-%s'; referrer 'no-referrer'", nonce))
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "SAMEORIGIN")
+		w.Header().Set("Permissions-Policy", "accelerometer=(), ambient-light-sensor=(), autoplay=(), battery=(), camera=(), cross-origin-isolated=(), display-capture=(), document-domain=(), encrypted-media=(), execution-while-not-rendered=(), execution-while-out-of-viewport=(), fullscreen=(), geolocation=(), gyroscope=(), keyboard-map=(), magnetometer=(), microphone=(), midi=(), navigation-override=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), sync-xhr=(), usb=(), web-share=(), xr-spatial-tracking=()")
+
+		// Call the next handler
+		next.ServeHTTP(w, r)
+	})
 }
