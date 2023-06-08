@@ -5,25 +5,35 @@ import (
 	"os"
 )
 
+const configFilePath = "static/data/count.json"
+
 func LoadConfig() (*Config, error) {
-	data, err := os.ReadFile("static/data/count.json")
+	file, err := os.Open(configFilePath)
 	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	var config Config
+	if err := decoder.Decode(&config); err != nil {
 		return nil, err
 	}
 
-	var config Config
-	err = json.Unmarshal(data, &config)
-	if err != nil {
-		return nil, err
-	}
 	return &config, nil
 }
 
 func SaveConfig(config *Config) error {
-	data, err := json.Marshal(config)
+	file, err := os.Create(configFilePath)
 	if err != nil {
 		return err
 	}
+	defer file.Close()
 
-	return os.WriteFile("static/data/count.json", data, 0644)
+	encoder := json.NewEncoder(file)
+	if err := encoder.Encode(config); err != nil {
+		return err
+	}
+
+	return nil
 }
