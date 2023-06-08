@@ -67,6 +67,7 @@ window.addEventListener("DOMContentLoaded", () => {
                 "EMLCID",
                 "EMLDTL",
                 "fbclid",
+                "gbraid",
                 "gclid",
                 "linkID",
                 "mailId",
@@ -76,6 +77,7 @@ window.addEventListener("DOMContentLoaded", () => {
                 "mc_eid",
                 "mgparam",
                 "rfrr",
+                "wbraid",
             ];
 
             const isBadPart =
