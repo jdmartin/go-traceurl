@@ -26,15 +26,15 @@ window.addEventListener("DOMContentLoaded", () => {
 
             // Split the path into segments
             const segments = path.split(/[?&]/);
-
             // Iterate over the segments
             for (const segment of segments) {
-                // Split the segment on the equals sign
-                const [key, value] = segment.split("=");
-
-                if (key && value) {
-                    if (filterTheParams(key)) {
-                        goodParams += `&${key}=${value}`;
+                if (segment.includes('=')) {
+                    // Split the segment on the equals sign
+                    const [key, value] = segment.split("=");
+                    if (key && value) {
+                        if (filterTheParams(key)) {
+                            goodParams += `&${key}=${value}`;
+                        }
                     }
                 } else if (segment.startsWith("#")) {
                     continue
