@@ -63,6 +63,8 @@ window.addEventListener("DOMContentLoaded", () => {
                 "cid",
                 "ck_subscriber_id",
                 "cmpid",
+                "dm_i",
+                "dm_t",
                 "ea.tracking.id",
                 "EMLCID",
                 "EMLDTL",
