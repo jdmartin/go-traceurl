@@ -13,11 +13,12 @@ import (
 )
 
 var (
-	cloudflareStatus bool
-	formTemplate     *template.Template
-	mode             string
-	resultTemplate   *template.Template
-	thereWasATimeout bool
+	cloudflareStatus         bool
+	formTemplate             *template.Template
+	mode                     string
+	resultTemplate           *template.Template
+	thereWasATimeout         bool
+	thereWasAValidationError bool
 )
 
 type Hop struct {
@@ -86,6 +87,10 @@ func main() {
 		}
 		// Handle the request
 		homeHandler(w, r, config)
+	})
+
+	http.HandleFunc("/certerror/", func(w http.ResponseWriter, r *http.Request) {
+		http.ServeFile(w, r, "static/certerror.html")
 	})
 
 	http.HandleFunc("/timeout/", func(w http.ResponseWriter, r *http.Request) {

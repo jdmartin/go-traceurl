@@ -23,6 +23,13 @@ func doTimeout(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/timeout", http.StatusFound)
 }
 
+func doValidationError(w http.ResponseWriter, r *http.Request) {
+	thereWasAValidationError = true
+	// Set the Content-Type header to "application/json"
+	w.Header().Set("Content-Type", "text/html")
+	http.Redirect(w, r, "/certerror", http.StatusFound)
+}
+
 func GenerateNonce() (string, error) {
 	// Define the desired length of the nonce (in bytes)
 	nonceLength := 16
@@ -108,6 +115,11 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 			if err, ok := err.(*url.Error); ok && err.Timeout() {
 				doTimeout(w, r)
 				return "", nil, nil
+			}
+
+			if strings.Contains(err.Error(), "x509: certificate signed by unknown authority") {
+				// Handle certificate verification error
+				doValidationError(w, r)
 			}
 			return "", nil, fmt.Errorf("error accessing URL: %s", err)
 		}
@@ -243,6 +255,9 @@ func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 	// No timeouts, yet.
 	thereWasATimeout = false
 
+	// No cert errors, yet.
+	thereWasAValidationError = false
+
 	// Increment the UseCount
 	config.UseCount++
 	fmt.Println("Updated UseCount:", config.UseCount)
@@ -310,7 +325,7 @@ func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 		CloudflareStatus: cloudflareStatus,
 	}
 
-	if !thereWasATimeout {
+	if !thereWasATimeout && !thereWasAValidationError {
 		resultTemplate.Execute(w, data)
 	}
 }
