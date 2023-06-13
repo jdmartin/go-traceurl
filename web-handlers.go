@@ -2,6 +2,7 @@ package main
 
 import (
 	"crypto/rand"
+	"crypto/tls"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -76,10 +77,13 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 	// CF didn't break anything yet.
 	cloudflareStatus = false
 
+	// Disable certificate verification
+	tr := &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	}
+
 	client := &http.Client{
-		Transport: &http.Transport{
-			ResponseHeaderTimeout: 5 * time.Second,
-		},
+		Transport: tr,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			// Stop following redirects after the first hop
 			if len(via) >= 1 {
@@ -87,6 +91,7 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 			}
 			return nil
 		},
+		Timeout: 5 * time.Second,
 	}
 
 	hops := []Hop{}
