@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/rand"
-	"crypto/tls"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -22,6 +21,13 @@ func doTimeout(w http.ResponseWriter, r *http.Request) {
 	// Set the Content-Type header to "application/json"
 	w.Header().Set("Content-Type", "text/html")
 	http.Redirect(w, r, "/timeout", http.StatusFound)
+}
+
+func doValidationError(w http.ResponseWriter, r *http.Request) {
+	thereWasAValidationError = true
+	// Set the Content-Type header to "application/json"
+	w.Header().Set("Content-Type", "text/html")
+	http.Redirect(w, r, "/certerror", http.StatusFound)
 }
 
 func GenerateNonce() (string, error) {
@@ -77,13 +83,10 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 	// CF didn't break anything yet.
 	cloudflareStatus = false
 
-	// Disable certificate verification
-	tr := &http.Transport{
-		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-	}
-
 	client := &http.Client{
-		Transport: tr,
+		Transport: &http.Transport{
+			ResponseHeaderTimeout: 5 * time.Second,
+		},
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			// Stop following redirects after the first hop
 			if len(via) >= 1 {
@@ -91,7 +94,6 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 			}
 			return nil
 		},
-		Timeout: 5 * time.Second,
 	}
 
 	hops := []Hop{}
@@ -113,6 +115,11 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 			if err, ok := err.(*url.Error); ok && err.Timeout() {
 				doTimeout(w, r)
 				return "", nil, nil
+			}
+
+			if strings.Contains(err.Error(), "x509: certificate signed by unknown authority") {
+				// Handle certificate verification error
+				doValidationError(w, r)
 			}
 			return "", nil, fmt.Errorf("error accessing URL: %s", err)
 		}
@@ -248,6 +255,9 @@ func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 	// No timeouts, yet.
 	thereWasATimeout = false
 
+	// No cert errors, yet.
+	thereWasAValidationError = false
+
 	// Increment the UseCount
 	config.UseCount++
 	fmt.Println("Updated UseCount:", config.UseCount)
@@ -315,7 +325,7 @@ func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 		CloudflareStatus: cloudflareStatus,
 	}
 
-	if !thereWasATimeout {
+	if !thereWasATimeout && !thereWasAValidationError {
 		resultTemplate.Execute(w, data)
 	}
 }
