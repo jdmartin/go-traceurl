@@ -210,10 +210,6 @@ func handleRelativeRedirect(previousURL *url.URL, location string, requestURL *u
 		return nil, err
 	}
 
-	if strings.HasPrefix(location, "https://outlook.office365.com") {
-		return redirectURL, nil
-	}
-
 	if redirectURL.Scheme == "" {
 		// If the scheme is missing, set it to the scheme of the previous URL or the request URL
 		if previousURL != nil {
