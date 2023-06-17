@@ -141,6 +141,18 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 				}
 				return "", []Hop{}, nil // Return empty slice of Hop when redirect location is not found
 			}
+			if strings.HasPrefix(location, "https://outlook.office365.com") {
+				// Only include the final request as the last hop
+				finalHop := Hop{
+					Number:     number + 2, // Increment the hop number for the final request
+					URL:        location,
+					StatusCode: http.StatusOK, // Set the status code to 200 for the final request
+				}
+				finalHop.StatusCodeClass = getStatusCodeClass(http.StatusOK)
+				hops = append(hops, finalHop)
+
+				return location, hops, nil
+			}
 
 			redirectURL, err := handleRelativeRedirect(previousURL, location, req.URL)
 			if err != nil {
