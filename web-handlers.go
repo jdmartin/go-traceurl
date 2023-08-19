@@ -245,9 +245,11 @@ func homeHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 		data := struct {
 			Nonce    string
 			UseCount int
+			Version string
 		}{
 			Nonce:    nonce, // Pass the nonce value to the template data
 			UseCount: config.UseCount,
+			Version: Version,
 		}
 		formTemplate.Execute(w, data)
 	} else {

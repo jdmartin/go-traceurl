@@ -12,6 +12,8 @@ import (
 	"github.com/didip/tollbooth/v7/limiter"
 )
 
+var Version = "1.1.9"
+
 var (
 	cloudflareStatus         bool
 	formTemplate             *template.Template
