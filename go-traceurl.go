@@ -41,16 +41,12 @@ type ResultData struct {
 }
 
 type Config struct {
-	UseCount int `json:"UseCount"`
+	UseCount int
 }
 
 func main() {
-	// Load the cached value on startup
-	config, err := LoadConfig()
-	if err != nil {
-		fmt.Println("No cached value found.")
-		config = &Config{UseCount: 0}
-	}
+	// Set counter to zero on startup
+	config := &Config{UseCount: 0}
 
 	// Make sure we have a port to serve on
 	port := os.Getenv("PORT")
@@ -125,12 +121,7 @@ func handleSIGINT(config *Config) {
 
 	go func() {
 		<-c
-		fmt.Println("\nReceived SIGINT. Caching the current value...")
-
-		// Cache the value on SIGINT
-		if err := SaveConfig(config); err != nil {
-			fmt.Println("Error saving the config:", err)
-		}
+		fmt.Println("\nReceived SIGINT. Stopping server...")
 
 		os.Exit(0)
 	}()
