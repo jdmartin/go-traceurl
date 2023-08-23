@@ -64,6 +64,6 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: songsthatsaved/go-traceurl:latest
           labels: ${{ steps.meta.outputs.labels }}
-          #cache-from: type=gha
-          #cache-to: type=gha,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
