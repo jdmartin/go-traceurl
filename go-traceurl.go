@@ -110,7 +110,7 @@ func main() {
 	http.HandleFunc("/static/data/", dataHandler)
 	http.HandleFunc("/static/js/", jsHandler)
 
-	addr := fmt.Sprintf(":%s", port)
+	addr := fmt.Sprintf("[::1]:%s", port)
 	fmt.Printf("Server listening on http://localhost%s\n", addr)
 	http.ListenAndServe(addr, secureHeaders(http.DefaultServeMux))
 }
