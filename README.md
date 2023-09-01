@@ -1,4 +1,4 @@
-[![Docker](https://github.com/jdmartin/wheregoes/actions/workflows/docker_build.yml/badge.svg)](https://github.com/jdmartin/wheregoes/actions/workflows/docker_build.yml) [![CodeQL](https://github.com/jdmartin/go-traceurl/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/jdmartin/go-traceurl/actions/workflows/github-code-scanning/codeql)
+[![CodeQL](https://github.com/jdmartin/go-traceurl/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/jdmartin/go-traceurl/actions/workflows/github-code-scanning/codeql)
 # go-traceurl
 A Go implementation of a URL tracer.
 
