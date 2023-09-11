@@ -1,4 +1,5 @@
-[![CodeQL](https://github.com/jdmartin/go-traceurl/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/jdmartin/go-traceurl/actions/workflows/github-code-scanning/codeql)
+[![CodeQL](https://github.com/jdmartin/go-traceurl/actions/workflows/codeql.yml/badge.svg)](https://github.com/jdmartin/go-traceurl/actions/workflows/codeql.yml)
+
 # go-traceurl
 A Go implementation of a URL tracer.
 
