@@ -13,7 +13,7 @@ import (
 	"github.com/didip/tollbooth/v7/limiter"
 )
 
-var Version = "2023.09.11.2"
+var Version = "2023.09.11.3"
 
 var (
 	cloudflareStatus         bool
@@ -60,8 +60,8 @@ func main() {
 
 	// Set default serveMode
 	serveMode := os.Getenv("SERVE")
-	if serveMode == "" {
-		serveMode = "tcp"
+	if serveMode != "tcp" {
+		serveMode = "socket"
 	}
 
 	// Set socket path for listenting
