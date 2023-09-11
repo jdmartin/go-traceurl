@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"html/template"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -12,7 +13,7 @@ import (
 	"github.com/didip/tollbooth/v7/limiter"
 )
 
-var Version = "2023.09.01.1"
+var Version = "2023.09.11.1"
 
 var (
 	cloudflareStatus         bool
@@ -48,14 +49,11 @@ func main() {
 	// Set counter to zero on startup
 	config := &Config{UseCount: 0}
 
-	// Make sure we have a port to serve on
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
-	}
-
 	// Detect dev or production mode
 	mode = os.Getenv("MODE")
+
+	// Set socket path for listenting
+	socketPath := "/tmp/go-trace.sock"
 
 	// Create a rate limiter with a limit of 1 requests per second
 	lim := tollbooth.NewLimiter(1, &limiter.ExpirableOptions{
@@ -69,7 +67,7 @@ func main() {
 	lim.SetHeaderEntryExpirationTTL(time.Hour)
 
 	// Handle SIGINT signal
-	handleSIGINT(config)
+	handleSIGINT(config, socketPath)
 
 	// Define templates.
 	formTemplate = template.Must(template.ParseFiles("static/form.html"))
@@ -110,18 +108,40 @@ func main() {
 	http.HandleFunc("/static/data/", dataHandler)
 	http.HandleFunc("/static/js/", jsHandler)
 
-	addr := fmt.Sprintf("localhost:%s", port)
-	fmt.Printf("Server listening on http://%s\n", addr)
-	http.ListenAndServe(addr, secureHeaders(http.DefaultServeMux))
+	l, err := net.Listen("unix", socketPath)
+	if err != nil {
+		fmt.Printf("Failed to listen on Unix socket: %v\n", err)
+		os.Exit(1)
+	}
+	defer l.Close()
+
+	// Set the permissions to 775 for the Unix domain socket
+    if err := os.Chmod(socketPath, 0775); err != nil {
+        fmt.Printf("Failed to set socket permissions: %v\n", err)
+        os.Exit(1)
+    }
+
+	fmt.Printf("Server listening on Unix socket: %s\n", socketPath)
+	http.Serve(l, secureHeaders(http.DefaultServeMux))
 }
 
-func handleSIGINT(config *Config) {
+func handleSIGINT(config *Config, socketPath string) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
 	go func() {
 		<-c
 		fmt.Println("\nReceived SIGINT. Stopping server...")
+
+		// Close the Unix domain socket
+        if l, err := net.Listen("unix", socketPath); err == nil {
+            l.Close()
+        }
+
+        // Remove the Unix domain socket file
+        if err := os.Remove(socketPath); err != nil {
+            fmt.Printf("Error removing socket file: %v\n", err)
+        }
 
 		os.Exit(0)
 	}()
