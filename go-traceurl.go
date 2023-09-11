@@ -13,7 +13,7 @@ import (
 	"github.com/didip/tollbooth/v7/limiter"
 )
 
-var Version = "2023.09.11.1"
+var Version = "2023.09.11.2"
 
 var (
 	cloudflareStatus         bool
@@ -52,6 +52,18 @@ func main() {
 	// Detect dev or production mode
 	mode = os.Getenv("MODE")
 
+	// Make sure we have a port to serve on
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "8080"
+	}
+
+	// Set default serveMode
+	serveMode := os.Getenv("SERVE")
+	if serveMode == "" {
+		serveMode = "tcp"
+	}
+
 	// Set socket path for listenting
 	socketPath := "/tmp/go-trace.sock"
 
@@ -67,7 +79,7 @@ func main() {
 	lim.SetHeaderEntryExpirationTTL(time.Hour)
 
 	// Handle SIGINT signal
-	handleSIGINT(config, socketPath)
+	handleSIGINT(config, socketPath, serveMode)
 
 	// Define templates.
 	formTemplate = template.Must(template.ParseFiles("static/form.html"))
@@ -108,7 +120,9 @@ func main() {
 	http.HandleFunc("/static/data/", dataHandler)
 	http.HandleFunc("/static/js/", jsHandler)
 
-	l, err := net.Listen("unix", socketPath)
+	switch {
+	case serveMode == "socket":
+		l, err := net.Listen("unix", socketPath)
 	if err != nil {
 		fmt.Printf("Failed to listen on Unix socket: %v\n", err)
 		os.Exit(1)
@@ -123,9 +137,15 @@ func main() {
 
 	fmt.Printf("Server listening on Unix socket: %s\n", socketPath)
 	http.Serve(l, secureHeaders(http.DefaultServeMux))
+
+	case serveMode == "tcp":
+		addr := fmt.Sprintf("localhost:%s", port)
+		fmt.Printf("Server listening on http://%s\n", addr)
+		http.ListenAndServe(addr, secureHeaders(http.DefaultServeMux))
+	}
 }
 
-func handleSIGINT(config *Config, socketPath string) {
+func handleSIGINT(config *Config, socketPath string, serveMode string) {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
@@ -133,15 +153,17 @@ func handleSIGINT(config *Config, socketPath string) {
 		<-c
 		fmt.Println("\nReceived SIGINT. Stopping server...")
 
-		// Close the Unix domain socket
-        if l, err := net.Listen("unix", socketPath); err == nil {
-            l.Close()
-        }
-
-        // Remove the Unix domain socket file
-        if err := os.Remove(socketPath); err != nil {
-            fmt.Printf("Error removing socket file: %v\n", err)
-        }
+		if serveMode == "socket" {
+			// Close the Unix domain socket
+			if l, err := net.Listen("unix", socketPath); err == nil {
+				l.Close()
+			}
+	
+			// Remove the Unix domain socket file
+			if err := os.Remove(socketPath); err != nil {
+				fmt.Printf("Error removing socket file: %v\n", err)
+			}
+		}
 
 		os.Exit(0)
 	}()
