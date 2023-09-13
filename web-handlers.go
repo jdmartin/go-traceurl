@@ -26,7 +26,6 @@ func doTimeout(w http.ResponseWriter, r *http.Request) {
 func doValidationError(w http.ResponseWriter, r *http.Request) {
 	thereWasAValidationError = true
 	// Set the Content-Type header to "application/json"
-	w.Header().Set("Content-Type", "text/html")
 	http.Redirect(w, r, "/certerror", http.StatusFound)
 }
 
@@ -245,11 +244,11 @@ func homeHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 		data := struct {
 			Nonce    string
 			UseCount int
-			Version string
+			Version  string
 		}{
 			Nonce:    nonce, // Pass the nonce value to the template data
 			UseCount: config.UseCount,
-			Version: Version,
+			Version:  Version,
 		}
 		formTemplate.Execute(w, data)
 	} else {

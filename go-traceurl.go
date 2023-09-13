@@ -13,7 +13,7 @@ import (
 	"github.com/didip/tollbooth/v7/limiter"
 )
 
-var Version = "2023.09.11.3"
+var Version = "2023.09.13.1"
 
 var (
 	cloudflareStatus         bool
@@ -123,20 +123,20 @@ func main() {
 	switch {
 	case serveMode == "socket":
 		l, err := net.Listen("unix", socketPath)
-	if err != nil {
-		fmt.Printf("Failed to listen on Unix socket: %v\n", err)
-		os.Exit(1)
-	}
-	defer l.Close()
+		if err != nil {
+			fmt.Printf("Failed to listen on Unix socket: %v\n", err)
+			os.Exit(1)
+		}
+		defer l.Close()
 
-	// Set the permissions to 775 for the Unix domain socket
-    if err := os.Chmod(socketPath, 0775); err != nil {
-        fmt.Printf("Failed to set socket permissions: %v\n", err)
-        os.Exit(1)
-    }
+		// Set the permissions to 775 for the Unix domain socket
+		if err := os.Chmod(socketPath, 0775); err != nil {
+			fmt.Printf("Failed to set socket permissions: %v\n", err)
+			os.Exit(1)
+		}
 
-	fmt.Printf("Server listening on Unix socket: %s\n", socketPath)
-	http.Serve(l, secureHeaders(http.DefaultServeMux))
+		fmt.Printf("Server listening on Unix socket: %s\n", socketPath)
+		http.Serve(l, secureHeaders(http.DefaultServeMux))
 
 	case serveMode == "tcp":
 		addr := fmt.Sprintf("localhost:%s", port)
@@ -158,7 +158,7 @@ func handleSIGINT(config *Config, socketPath string, serveMode string) {
 			if l, err := net.Listen("unix", socketPath); err == nil {
 				l.Close()
 			}
-	
+
 			// Remove the Unix domain socket file
 			if err := os.Remove(socketPath); err != nil {
 				fmt.Printf("Error removing socket file: %v\n", err)
