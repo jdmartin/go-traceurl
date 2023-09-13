@@ -119,6 +119,7 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 			if strings.Contains(err.Error(), "x509: certificate signed by unknown authority") {
 				// Handle certificate verification error
 				doValidationError(w, r)
+				return "", nil, nil
 			}
 			return "", nil, fmt.Errorf("error accessing URL: %s", err)
 		}
