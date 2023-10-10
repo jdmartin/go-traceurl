@@ -13,7 +13,7 @@ import (
 	"github.com/didip/tollbooth/v7/limiter"
 )
 
-var Version = "2023.10.10.1"
+var Version = "2023.10.10.2"
 
 var (
 	cloudflareStatus         bool
@@ -56,6 +56,12 @@ func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
+	}
+
+	// Allow setting of listen address
+	host := os.Getenv("HOST")
+	if host == "" {
+		host = "127.0.0.1"
 	}
 
 	// Set default serveMode
@@ -139,7 +145,7 @@ func main() {
 		http.Serve(l, secureHeaders(http.DefaultServeMux))
 
 	case serveMode == "tcp":
-		addr := fmt.Sprintf("localhost:%s", port)
+		addr := fmt.Sprintf("%s:%s", host, port)
 		fmt.Printf("Server listening on http://%s\n", addr)
 		http.ListenAndServe(addr, secureHeaders(http.DefaultServeMux))
 	}
