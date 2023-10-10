@@ -1,6 +1,6 @@
 module go-traceurl
 
-go 1.21.2
+go 1.21.3
 
 require github.com/microcosm-cc/bluemonday v1.0.25 // direct
 
@@ -11,5 +11,5 @@ require (
 	github.com/go-pkgz/expirable-cache v1.0.0 // indirect
 	github.com/gorilla/css v1.0.0 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
-	golang.org/x/net v0.16.0 // indirect
+	golang.org/x/net v0.17.0 // indirect
 )
