@@ -2,7 +2,7 @@ module go-traceurl
 
 go 1.21.3
 
-require github.com/microcosm-cc/bluemonday v1.0.25 // direct
+require github.com/microcosm-cc/bluemonday v1.0.26 // direct
 
 require github.com/didip/tollbooth/v7 v7.0.1
 
