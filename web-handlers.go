@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"strings"
 	"time"
 
@@ -63,19 +64,31 @@ func getStatusCodeClass(statusCode int) string {
 
 // *** Handlers ***
 func cssHandler(w http.ResponseWriter, r *http.Request) {
-	filePath := "static/css/" + strings.TrimPrefix(r.URL.Path, "/static/css/")
-	http.ServeFile(w, r, filePath)
+	// Sanitize the user-provided URL path to prevent path traversal attacks
+	filePath := "static/css/" + path.Clean(strings.TrimPrefix(r.URL.Path, "/static/css/"))
 
-	// Set the Content-Type header to "text/css"
-	w.Header().Set("Content-Type", "text/css")
+	// Check if the file exists and serve it only if it does
+	if _, err := os.Stat(filePath); err == nil {
+		http.ServeFile(w, r, filePath)
+		w.Header().Set("Content-Type", "text/css")
+	} else {
+		// Handle the case where the file does not exist or is invalid
+		http.NotFound(w, r)
+	}
 }
 
 func dataHandler(w http.ResponseWriter, r *http.Request) {
-	filePath := "static/data/" + strings.TrimPrefix(r.URL.Path, "/static/data/")
-	http.ServeFile(w, r, filePath)
+	// Sanitize the user-provided URL path to prevent path traversal attacks
+	filePath := "static/data/" + path.Clean(strings.TrimPrefix(r.URL.Path, "/static/data/"))
 
-	// Set the Content-Type header to "application/json"
-	w.Header().Set("Content-Type", "application/json")
+	// Check if the file exists and serve it only if it does
+	if _, err := os.Stat(filePath); err == nil {
+		http.ServeFile(w, r, filePath)
+		w.Header().Set("Content-Type", "application/json")
+	} else {
+		// Handle the case where the file does not exist or is invalid
+		http.NotFound(w, r)
+	}
 }
 
 func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (string, []Hop, error) {
@@ -258,11 +271,17 @@ func homeHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 }
 
 func jsHandler(w http.ResponseWriter, r *http.Request) {
-	filePath := "static/js/" + strings.TrimPrefix(r.URL.Path, "/static/js/")
-	http.ServeFile(w, r, filePath)
+	// Sanitize the user-provided URL path to prevent path traversal attacks
+	filePath := "static/js/" + path.Clean(strings.TrimPrefix(r.URL.Path, "/static/js/"))
 
-	// Set the Content-Type header to "application/javascript"
-	w.Header().Set("Content-Type", "application/javascript")
+	// Check if the file exists and serve it only if it does
+	if _, err := os.Stat(filePath); err == nil {
+		http.ServeFile(w, r, filePath)
+		w.Header().Set("Content-Type", "application/javascript")
+	} else {
+		// Handle the case where the file does not exist or is invalid
+		http.NotFound(w, r)
+	}
 }
 
 func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
