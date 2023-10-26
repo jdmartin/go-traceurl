@@ -61,15 +61,6 @@ func getStatusCodeClass(statusCode int) string {
 	}
 }
 
-func isPathValid(validPaths []string, path string) bool {
-	for _, p := range validPaths {
-		if p == path {
-			return true
-		}
-	}
-	return false
-}
-
 // *** Handlers ***
 func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (string, []Hop, error) {
 	// CF didn't break anything yet.
