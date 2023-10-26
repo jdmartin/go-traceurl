@@ -22,6 +22,10 @@ var allowedCSSFiles = map[string]bool{
 	"gotrace.min.css": true,
 }
 
+var allowedJSONFiles = map[string]bool{
+	"http_status_codes.json": true,
+}
+
 var allowedJSFiles = map[string]bool{
 	"main.js":             true,
 	"main.min.js":         true,
@@ -78,8 +82,7 @@ func getStatusCodeClass(statusCode int) string {
 
 // *** Handlers ***
 func cssHandler(w http.ResponseWriter, r *http.Request) {
-	// Sanitize the user-provided URL path to prevent path traversal attacks
-	filePath := "static/css/" + path.Clean(strings.TrimPrefix(r.URL.Path, "/static/css/"))
+	filePath := "static/css/" + r.URL.Path
 
 	// Check if the requested file is in the allowed list
 	if _, ok := allowedCSSFiles[path.Base(filePath)]; ok {
@@ -101,21 +104,23 @@ func cssHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func dataHandler(w http.ResponseWriter, r *http.Request) {
-	// Construct the full path to the allowed JSON file
-	filePath := "static/data/http_status_codes.json"
+	filePath := "static/data/" + r.URL.Path
 
-	// Check if the requested file matches the allowed file
-	if r.URL.Path == "/static/data/http_status_codes.json" {
+	// Check if the requested file is in the allowed list
+	if _, ok := allowedJSONFiles[path.Base(filePath)]; ok {
+		// Construct the full path to the file
+		fullPath := "static/data/" + path.Base(filePath)
+
 		// Check if the file exists and serve it only if it does
-		if _, err := os.Stat(filePath); err == nil {
-			http.ServeFile(w, r, filePath)
+		if _, err := os.Stat(fullPath); err == nil {
+			http.ServeFile(w, r, fullPath)
 			w.Header().Set("Content-Type", "application/json")
 		} else {
 			// Handle the case where the file does not exist or is invalid
 			http.NotFound(w, r)
 		}
 	} else {
-		// Handle the case where the requested file is not allowed
+		// Handle the case where the requested file is not in the allowed list
 		http.NotFound(w, r)
 	}
 }
@@ -300,8 +305,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 }
 
 func jsHandler(w http.ResponseWriter, r *http.Request) {
-	// Sanitize the user-provided URL path to prevent path traversal attacks
-	filePath := "static/js/" + path.Clean(strings.TrimPrefix(r.URL.Path, "/static/js/"))
+	filePath := "static/js/" + r.URL.Path
 
 	// Check if the requested file is in the allowed list
 	if _, ok := allowedJSFiles[path.Base(filePath)]; ok {
