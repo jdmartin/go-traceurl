@@ -13,7 +13,7 @@ import (
 	"github.com/didip/tollbooth/v7/limiter"
 )
 
-var Version = "2023.10.26.B"
+var Version = "2023.10.26.C"
 
 var (
 	cloudflareStatus         bool

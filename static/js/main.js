@@ -79,6 +79,8 @@ window.addEventListener("DOMContentLoaded", () => {
                 "mc_eid",
                 "mgparam",
                 "rfrr",
+                "ser",
+                "snr",
                 "wbraid",
             ];
 
