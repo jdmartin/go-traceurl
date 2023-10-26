@@ -13,7 +13,7 @@ import (
 	"github.com/didip/tollbooth/v7/limiter"
 )
 
-var Version = "2023.10.26.2"
+var Version = "2023.10.26.3"
 
 var (
 	cloudflareStatus         bool
@@ -123,7 +123,7 @@ func main() {
 	})
 
 	http.HandleFunc("/static/css/", cssHandler)
-	http.HandleFunc("/static/data/", dataHandler)
+	http.HandleFunc("/static/data/http_status_codes.json", dataHandler)
 	http.HandleFunc("/static/js/", jsHandler)
 
 	switch {

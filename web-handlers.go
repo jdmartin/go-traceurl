@@ -16,6 +16,20 @@ import (
 	"github.com/microcosm-cc/bluemonday"
 )
 
+// *** File Control ***
+var allowedCSSFiles = map[string]bool{
+	"gotrace.css":     true,
+	"gotrace.min.css": true,
+}
+
+var allowedJSFiles = map[string]bool{
+	"main.js":             true,
+	"main.min.js":         true,
+	"purify.min.js":       true,
+	"queryHandler.js":     true,
+	"queryHandler.min.js": true,
+}
+
 // *** Helper Functions ***
 func doTimeout(w http.ResponseWriter, r *http.Request) {
 	thereWasATimeout = true
@@ -67,26 +81,41 @@ func cssHandler(w http.ResponseWriter, r *http.Request) {
 	// Sanitize the user-provided URL path to prevent path traversal attacks
 	filePath := "static/css/" + path.Clean(strings.TrimPrefix(r.URL.Path, "/static/css/"))
 
-	// Check if the file exists and serve it only if it does
-	if _, err := os.Stat(filePath); err == nil {
-		http.ServeFile(w, r, filePath)
-		w.Header().Set("Content-Type", "text/css")
+	// Check if the requested file is in the allowed list
+	if _, ok := allowedCSSFiles[path.Base(filePath)]; ok {
+		// Construct the full path to the file
+		fullPath := "static/css/" + path.Base(filePath)
+
+		// Check if the file exists and serve it only if it does
+		if _, err := os.Stat(fullPath); err == nil {
+			http.ServeFile(w, r, fullPath)
+			w.Header().Set("Content-Type", "text/css")
+		} else {
+			// Handle the case where the file does not exist or is invalid
+			http.NotFound(w, r)
+		}
 	} else {
-		// Handle the case where the file does not exist or is invalid
+		// Handle the case where the requested file is not in the allowed list
 		http.NotFound(w, r)
 	}
 }
 
 func dataHandler(w http.ResponseWriter, r *http.Request) {
-	// Sanitize the user-provided URL path to prevent path traversal attacks
-	filePath := "static/data/" + path.Clean(strings.TrimPrefix(r.URL.Path, "/static/data/"))
+	// Construct the full path to the allowed JSON file
+	filePath := "static/data/http_status_codes.json"
 
-	// Check if the file exists and serve it only if it does
-	if _, err := os.Stat(filePath); err == nil {
-		http.ServeFile(w, r, filePath)
-		w.Header().Set("Content-Type", "application/json")
+	// Check if the requested file matches the allowed file
+	if r.URL.Path == "/static/data/http_status_codes.json" {
+		// Check if the file exists and serve it only if it does
+		if _, err := os.Stat(filePath); err == nil {
+			http.ServeFile(w, r, filePath)
+			w.Header().Set("Content-Type", "application/json")
+		} else {
+			// Handle the case where the file does not exist or is invalid
+			http.NotFound(w, r)
+		}
 	} else {
-		// Handle the case where the file does not exist or is invalid
+		// Handle the case where the requested file is not allowed
 		http.NotFound(w, r)
 	}
 }
@@ -274,12 +303,21 @@ func jsHandler(w http.ResponseWriter, r *http.Request) {
 	// Sanitize the user-provided URL path to prevent path traversal attacks
 	filePath := "static/js/" + path.Clean(strings.TrimPrefix(r.URL.Path, "/static/js/"))
 
-	// Check if the file exists and serve it only if it does
-	if _, err := os.Stat(filePath); err == nil {
-		http.ServeFile(w, r, filePath)
-		w.Header().Set("Content-Type", "application/javascript")
+	// Check if the requested file is in the allowed list
+	if _, ok := allowedJSFiles[path.Base(filePath)]; ok {
+		// Construct the full path to the file
+		fullPath := "static/js/" + path.Base(filePath)
+
+		// Check if the file exists and serve it only if it does
+		if _, err := os.Stat(fullPath); err == nil {
+			http.ServeFile(w, r, fullPath)
+			w.Header().Set("Content-Type", "application/javascript")
+		} else {
+			// Handle the case where the file does not exist or is invalid
+			http.NotFound(w, r)
+		}
 	} else {
-		// Handle the case where the file does not exist or is invalid
+		// Handle the case where the requested file is not in the allowed list
 		http.NotFound(w, r)
 	}
 }
