@@ -13,7 +13,7 @@ import (
 	"github.com/didip/tollbooth/v7/limiter"
 )
 
-var Version = "2023.10.26.A"
+var Version = "2023.10.26.B"
 
 var (
 	cloudflareStatus         bool
@@ -134,9 +134,10 @@ func main() {
 		traceHandler(w, r, config)
 	})
 
-	http.HandleFunc("/static/css/", cssHandler)
-	http.HandleFunc("/static/data/", dataHandler)
-	http.HandleFunc("/static/js/", jsHandler)
+	// Serve static files using http.FileServer and http.StripPrefix
+	http.Handle("/static/css/", http.StripPrefix("/static/css/", http.FileServer(http.Dir("static/css"))))
+	http.Handle("/static/data/", http.StripPrefix("/static/data/", http.FileServer(http.Dir("static/data"))))
+	http.Handle("/static/js/", http.StripPrefix("/static/js/", http.FileServer(http.Dir("static/js"))))
 
 	switch {
 	case serveMode == "socket":

@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"path"
 	"strings"
 	"time"
 
@@ -72,51 +71,6 @@ func isPathValid(validPaths []string, path string) bool {
 }
 
 // *** Handlers ***
-func cssHandler(w http.ResponseWriter, r *http.Request) {
-	validPaths := []string{
-		"/static/css/gotrace.css",
-		"/static/css/gotrace.min.css",
-	}
-
-	if !isPathValid(validPaths, r.URL.Path) {
-		// Handle the case where an invalid request is made to the /static/css/ endpoint
-		http.NotFound(w, r)
-		return
-	}
-
-	fullPath := path.Join("static/css", path.Base(r.URL.Path))
-	// Check if the file exists and serve it only if it does
-	if _, err := os.Stat(fullPath); err == nil {
-		http.ServeFile(w, r, fullPath)
-		w.Header().Set("Content-Type", "text/css")
-	} else {
-		// Handle the case where the requested file doesn't exist
-		http.NotFound(w, r)
-	}
-}
-
-func dataHandler(w http.ResponseWriter, r *http.Request) {
-	validPaths := []string{
-		"/static/data/http_status_codes.json",
-	}
-
-	if !isPathValid(validPaths, r.URL.Path) {
-		// Handle the case where an invalid request is made to the /static/data/ endpoint
-		http.NotFound(w, r)
-		return
-	}
-
-	fullPath := path.Join("static/data", path.Base(r.URL.Path))
-	// Check if the file exists and serve it only if it does
-	if _, err := os.Stat(fullPath); err == nil {
-		http.ServeFile(w, r, fullPath)
-		w.Header().Set("Content-Type", "application/json")
-	} else {
-		// Handle the case where the requested file doesn't exist
-		http.NotFound(w, r)
-	}
-}
-
 func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (string, []Hop, error) {
 	// CF didn't break anything yet.
 	cloudflareStatus = false
@@ -293,32 +247,6 @@ func homeHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 		formTemplate.Execute(w, data)
 	} else {
 		http.Redirect(w, r, "/", http.StatusFound)
-	}
-}
-
-func jsHandler(w http.ResponseWriter, r *http.Request) {
-	validPaths := []string{
-		"/static/js/main.js",
-		"/static/js/main.min.js",
-		"/static/js/purify.min.js",
-		"/static/js/queryHandler.js",
-		"/static/js/queryHandler.min.js",
-	}
-
-	if !isPathValid(validPaths, r.URL.Path) {
-		// Handle the case where an invalid request is made to the /static/js/ endpoint
-		http.NotFound(w, r)
-		return
-	}
-
-	fullPath := path.Join("static/js", path.Base(r.URL.Path))
-	// Check if the file exists and serve it only if it does
-	if _, err := os.Stat(fullPath); err == nil {
-		http.ServeFile(w, r, fullPath)
-		w.Header().Set("Content-Type", "application/javascript")
-	} else {
-		// Handle the case where the requested file doesn't exist
-		http.NotFound(w, r)
 	}
 }
 
