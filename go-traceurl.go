@@ -13,7 +13,7 @@ import (
 	"github.com/didip/tollbooth/v7/limiter"
 )
 
-var Version = "2023.10.26.3"
+var Version = "2023.10.26.B"
 
 var (
 	cloudflareStatus         bool
@@ -23,6 +23,13 @@ var (
 	thereWasATimeout         bool
 	thereWasAValidationError bool
 )
+
+var allowedEndpoints = map[string]bool{
+	"/":           true,
+	"/certerror/": true,
+	"/timeout/":   true,
+	"/trace":      true,
+}
 
 type Hop struct {
 	Number          int
@@ -93,6 +100,11 @@ func main() {
 
 	// Establish Routes
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		// Check if the requested endpoint is allowed
+		if _, ok := allowedEndpoints[r.URL.Path]; !ok {
+			http.NotFound(w, r)
+			return
+		}
 		// Limit the request using the rate limiter
 		httpError := tollbooth.LimitByRequest(lim, w, r)
 		if httpError != nil {
@@ -122,9 +134,10 @@ func main() {
 		traceHandler(w, r, config)
 	})
 
-	http.HandleFunc("/static/css/", cssHandler)
-	http.HandleFunc("/static/data/http_status_codes.json", dataHandler)
-	http.HandleFunc("/static/js/", jsHandler)
+	// Serve static files using http.FileServer and http.StripPrefix
+	http.Handle("/static/css/", http.StripPrefix("/static/css/", http.FileServer(http.Dir("static/css"))))
+	http.Handle("/static/data/", http.StripPrefix("/static/data/", http.FileServer(http.Dir("static/data"))))
+	http.Handle("/static/js/", http.StripPrefix("/static/js/", http.FileServer(http.Dir("static/js"))))
 
 	switch {
 	case serveMode == "socket":
