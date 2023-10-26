@@ -89,14 +89,9 @@ func cssHandler(w http.ResponseWriter, r *http.Request) {
 		// Construct the full path to the file
 		fullPath := "static/css/" + path.Base(filePath)
 
-		// Check if the file exists and serve it only if it does
-		if _, err := os.Stat(fullPath); err == nil {
-			http.ServeFile(w, r, fullPath)
-			w.Header().Set("Content-Type", "text/css")
-		} else {
-			// Handle the case where the file does not exist or is invalid
-			http.NotFound(w, r)
-		}
+		// Serve the file directly
+		http.ServeFile(w, r, fullPath)
+		w.Header().Set("Content-Type", "text/css")
 	} else {
 		// Handle the case where the requested file is not in the allowed list
 		http.NotFound(w, r)
@@ -111,14 +106,9 @@ func dataHandler(w http.ResponseWriter, r *http.Request) {
 		// Construct the full path to the file
 		fullPath := "static/data/" + path.Base(filePath)
 
-		// Check if the file exists and serve it only if it does
-		if _, err := os.Stat(fullPath); err == nil {
-			http.ServeFile(w, r, fullPath)
-			w.Header().Set("Content-Type", "application/json")
-		} else {
-			// Handle the case where the file does not exist or is invalid
-			http.NotFound(w, r)
-		}
+		// Serve the file directly
+		http.ServeFile(w, r, fullPath)
+		w.Header().Set("Content-Type", "application/json")
 	} else {
 		// Handle the case where the requested file is not in the allowed list
 		http.NotFound(w, r)
@@ -312,14 +302,9 @@ func jsHandler(w http.ResponseWriter, r *http.Request) {
 		// Construct the full path to the file
 		fullPath := "static/js/" + path.Base(filePath)
 
-		// Check if the file exists and serve it only if it does
-		if _, err := os.Stat(fullPath); err == nil {
-			http.ServeFile(w, r, fullPath)
-			w.Header().Set("Content-Type", "application/javascript")
-		} else {
-			// Handle the case where the file does not exist or is invalid
-			http.NotFound(w, r)
-		}
+		// Serve the file directly
+		http.ServeFile(w, r, fullPath)
+		w.Header().Set("Content-Type", "application/javascript")
 	} else {
 		// Handle the case where the requested file is not in the allowed list
 		http.NotFound(w, r)
