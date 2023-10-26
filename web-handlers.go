@@ -64,6 +64,12 @@ func getStatusCodeClass(statusCode int) string {
 
 // *** Handlers ***
 func cssHandler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "/static/css/" {
+		// Handle the case where an invalid request is made to the /static/css/ endpoint
+		http.NotFound(w, r)
+		return
+	}
+
 	fileName := path.Base(r.URL.Path)
 
 	// List of allowed CSS files
@@ -92,6 +98,12 @@ func cssHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func dataHandler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "/static/data/" {
+		// Handle the case where an invalid request is made to the /static/data/ endpoint
+		http.NotFound(w, r)
+		return
+	}
+
 	fileName := path.Base(r.URL.Path)
 
 	// List of allowed JSON files
@@ -298,6 +310,12 @@ func homeHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 }
 
 func jsHandler(w http.ResponseWriter, r *http.Request) {
+	if r.URL.Path == "/static/js/" {
+		// Handle the case where an invalid request is made to the /static/js/ endpoint
+		http.NotFound(w, r)
+		return
+	}
+
 	fileName := path.Base(r.URL.Path)
 
 	// List of allowed JavaScript files
