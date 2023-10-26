@@ -62,72 +62,59 @@ func getStatusCodeClass(statusCode int) string {
 	}
 }
 
+func isPathValid(validPaths []string, path string) bool {
+	for _, p := range validPaths {
+		if p == path {
+			return true
+		}
+	}
+	return false
+}
+
 // *** Handlers ***
 func cssHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path == "/static/css/" {
+	validPaths := []string{
+		"/static/css/gotrace.css",
+		"/static/css/gotrace.min.css",
+	}
+
+	if !isPathValid(validPaths, r.URL.Path) {
 		// Handle the case where an invalid request is made to the /static/css/ endpoint
 		http.NotFound(w, r)
 		return
 	}
 
-	fileName := path.Base(r.URL.Path)
-
-	// List of allowed CSS files
-	allowedCSSFiles := []string{
-		"gotrace.css",
-		"gotrace.min.css",
+	fullPath := path.Join("static/css", path.Base(r.URL.Path))
+	// Check if the file exists and serve it only if it does
+	if _, err := os.Stat(fullPath); err == nil {
+		http.ServeFile(w, r, fullPath)
+		w.Header().Set("Content-Type", "text/css")
+	} else {
+		// Handle the case where the requested file doesn't exist
+		http.NotFound(w, r)
 	}
-
-	// Check if the requested file is in the allowed list
-	for _, allowedFile := range allowedCSSFiles {
-		if fileName == allowedFile {
-			// Construct the full path to the file
-			fullPath := "static/css/" + fileName
-
-			// Check if the file exists and serve it only if it does
-			if _, err := os.Stat(fullPath); err == nil {
-				http.ServeFile(w, r, fullPath)
-				w.Header().Set("Content-Type", "text/css")
-				return
-			}
-		}
-	}
-
-	// Handle the case where the requested file is not allowed or doesn't exist
-	http.NotFound(w, r)
 }
 
 func dataHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path == "/static/data/" {
+	validPaths := []string{
+		"/static/data/http_status_codes.json",
+	}
+
+	if !isPathValid(validPaths, r.URL.Path) {
 		// Handle the case where an invalid request is made to the /static/data/ endpoint
 		http.NotFound(w, r)
 		return
 	}
 
-	fileName := path.Base(r.URL.Path)
-
-	// List of allowed JSON files
-	allowedJSONFiles := []string{
-		"http_status_codes.json",
+	fullPath := path.Join("static/data", path.Base(r.URL.Path))
+	// Check if the file exists and serve it only if it does
+	if _, err := os.Stat(fullPath); err == nil {
+		http.ServeFile(w, r, fullPath)
+		w.Header().Set("Content-Type", "application/json")
+	} else {
+		// Handle the case where the requested file doesn't exist
+		http.NotFound(w, r)
 	}
-
-	// Check if the requested file is in the allowed list
-	for _, allowedFile := range allowedJSONFiles {
-		if fileName == allowedFile {
-			// Construct the full path to the file
-			fullPath := "static/data/" + fileName
-
-			// Check if the file exists and serve it only if it does
-			if _, err := os.Stat(fullPath); err == nil {
-				http.ServeFile(w, r, fullPath)
-				w.Header().Set("Content-Type", "application/json")
-				return
-			}
-		}
-	}
-
-	// Handle the case where the requested file is not allowed or doesn't exist
-	http.NotFound(w, r)
 }
 
 func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (string, []Hop, error) {
@@ -310,40 +297,29 @@ func homeHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 }
 
 func jsHandler(w http.ResponseWriter, r *http.Request) {
-	if r.URL.Path == "/static/js/" {
+	validPaths := []string{
+		"/static/js/main.js",
+		"/static/js/main.min.js",
+		"/static/js/purify.min.js",
+		"/static/js/queryHandler.js",
+		"/static/js/queryHandler.min.js",
+	}
+
+	if !isPathValid(validPaths, r.URL.Path) {
 		// Handle the case where an invalid request is made to the /static/js/ endpoint
 		http.NotFound(w, r)
 		return
 	}
 
-	fileName := path.Base(r.URL.Path)
-
-	// List of allowed JavaScript files
-	allowedJSFiles := []string{
-		"main.js",
-		"main.min.js",
-		"purify.min.js",
-		"queryHandler.js",
-		"queryHandler.min.js",
+	fullPath := path.Join("static/js", path.Base(r.URL.Path))
+	// Check if the file exists and serve it only if it does
+	if _, err := os.Stat(fullPath); err == nil {
+		http.ServeFile(w, r, fullPath)
+		w.Header().Set("Content-Type", "application/javascript")
+	} else {
+		// Handle the case where the requested file doesn't exist
+		http.NotFound(w, r)
 	}
-
-	// Check if the requested file is in the allowed list
-	for _, allowedFile := range allowedJSFiles {
-		if fileName == allowedFile {
-			// Construct the full path to the file
-			fullPath := "static/js/" + fileName
-
-			// Check if the file exists and serve it only if it does
-			if _, err := os.Stat(fullPath); err == nil {
-				http.ServeFile(w, r, fullPath)
-				w.Header().Set("Content-Type", "application/javascript")
-				return
-			}
-		}
-	}
-
-	// Handle the case where the requested file is not allowed or doesn't exist
-	http.NotFound(w, r)
 }
 
 func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
