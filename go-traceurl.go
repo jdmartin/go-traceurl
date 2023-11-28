@@ -13,7 +13,7 @@ import (
 	"github.com/didip/tollbooth/v7/limiter"
 )
 
-var Version = "2023.11.28.1"
+var Version = "2023.11.28.2"
 
 var (
 	cloudflareStatus         bool
@@ -32,7 +32,7 @@ var allowedEndpoints = map[string]bool{
 }
 
 // Use a set to keep track of visited URLs
-var visitedURLs = make(map[string]bool)
+var visitedURLs = make(map[string]int)
 
 type Hop struct {
 	Number               int

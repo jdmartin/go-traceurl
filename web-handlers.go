@@ -86,7 +86,8 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 
 	for {
 		// Check if the URL has been visited before
-		if visitedURLs[urlStr] {
+		visitCount := visitedURLs[urlStr]
+		if visitCount >= 2 {
 			// Redirect loop detected
 			hops = append(hops, Hop{
 				Number:               number,
@@ -99,7 +100,7 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 			return urlStr, hops, nil
 		}
 
-		visitedURLs[urlStr] = true
+		visitedURLs[urlStr]++
 
 		req, err := http.NewRequest("GET", urlStr, nil)
 		if err != nil {
