@@ -84,23 +84,26 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 
 	var previousURL *url.URL
 
+	// Use a set to keep track of visited URLs
+	visitedURLs := make(map[string]int)
+
+	// Ensure the initial URL is marked as visited
+	visitedURLs[urlStr] = 1
+
 	for {
 		// Check if the URL has been visited before
-		visitCount := visitedURLs[urlStr]
-		if visitCount >= 2 {
+		if visitedURLs[urlStr] > 1 {
 			// Redirect loop detected
 			hops = append(hops, Hop{
-				Number:               number,
-				URL:                  urlStr,
-				StatusCode:           http.StatusLoopDetected,
-				StatusCodeClass:      getStatusCodeClass(http.StatusLoopDetected),
-				RedirectLoopDetected: true,
+				Number:          number,
+				URL:             urlStr,
+				StatusCode:      http.StatusLoopDetected,
+				StatusCodeClass: getStatusCodeClass(http.StatusLoopDetected),
 			})
-
 			return urlStr, hops, nil
+		} else {
+			visitedURLs[urlStr]++
 		}
-
-		visitedURLs[urlStr]++
 
 		req, err := http.NewRequest("GET", urlStr, nil)
 		if err != nil {

@@ -13,7 +13,7 @@ import (
 	"github.com/didip/tollbooth/v7/limiter"
 )
 
-var Version = "2023.11.28.2"
+var Version = "2023.11.28.3"
 
 var (
 	cloudflareStatus         bool
@@ -31,15 +31,11 @@ var allowedEndpoints = map[string]bool{
 	"/trace":      true,
 }
 
-// Use a set to keep track of visited URLs
-var visitedURLs = make(map[string]int)
-
 type Hop struct {
-	Number               int
-	URL                  string
-	StatusCode           int
-	StatusCodeClass      string
-	RedirectLoopDetected bool // Indicates if a redirect loop is detected
+	Number          int
+	URL             string
+	StatusCode      int
+	StatusCodeClass string
 }
 
 type ResultData struct {
