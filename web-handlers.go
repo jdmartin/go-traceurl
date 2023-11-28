@@ -85,6 +85,22 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 	var previousURL *url.URL
 
 	for {
+		// Check if the URL has been visited before
+		if visitedURLs[urlStr] {
+			// Redirect loop detected
+			hops = append(hops, Hop{
+				Number:               number,
+				URL:                  urlStr,
+				StatusCode:           http.StatusLoopDetected,
+				StatusCodeClass:      getStatusCodeClass(http.StatusLoopDetected),
+				RedirectLoopDetected: true,
+			})
+
+			return urlStr, hops, nil
+		}
+
+		visitedURLs[urlStr] = true
+
 		req, err := http.NewRequest("GET", urlStr, nil)
 		if err != nil {
 			return "", nil, fmt.Errorf("error creating request: %s", err)
