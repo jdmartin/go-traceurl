@@ -1,11 +1,11 @@
 FROM cgr.dev/chainguard/go:latest as build
 
-#Build 03 Oct 2023
+#Build 28 Nov 2023
 
 RUN mkdir /
 WORKDIR /
 COPY . .
-RUN CGO_ENABLED=0 go build -ldflags="-s -w" -o main .
+RUN CGO_ENABLED=0 go build -ldflags="-w -s" -gcflags "all=-N -l" -tags netgo -o main .
 
 FROM cgr.dev/chainguard/glibc-dynamic
 COPY --from=build /main /
