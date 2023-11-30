@@ -18,7 +18,6 @@ var Version = "2023.11.29.1"
 var (
 	formTemplate   *template.Template
 	httpClient     = createHTTPClient()
-	mode           string
 	resultTemplate *template.Template
 )
 
@@ -220,7 +219,7 @@ func secureHeaders(next http.Handler) http.Handler {
 		w.Header().Set("Permissions-Policy", "accelerometer=(), ambient-light-sensor=(), autoplay=(), battery=(), camera=(), cross-origin-isolated=(), display-capture=(), document-domain=(), encrypted-media=(), execution-while-not-rendered=(), execution-while-out-of-viewport=(), fullscreen=(), geolocation=(), gyroscope=(), keyboard-map=(), magnetometer=(), microphone=(), midi=(), navigation-override=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), sync-xhr=(), usb=(), web-share=(), xr-spatial-tracking=()")
 
 		// USE HSTS when in production mode only, because testing.
-		if mode == "production" {
+		if os.Getenv("MODE") == "production" {
 			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
 		}
 
