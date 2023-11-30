@@ -58,8 +58,7 @@ func getStatusCodeClass(statusCode int) string {
 // *** Handlers ***
 func followRedirects(client *http.Client, urlStr string, w http.ResponseWriter, r *http.Request) (string, []Hop, bool, error) {
 	// CF didn't break anything yet.
-	var cloudflareStatus bool
-	cloudflareStatus = false
+	var cloudflareStatus bool // Defaults to false
 
 	hops := []Hop{}
 	number := 1

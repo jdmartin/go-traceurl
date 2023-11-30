@@ -13,12 +13,11 @@ import (
 	"github.com/didip/tollbooth/v7/limiter"
 )
 
-var Version = "2023.11.29.1"
-
 var (
 	formTemplate   *template.Template
 	httpClient     = createHTTPClient()
 	resultTemplate *template.Template
+	Version        = "2023.11.30.1"
 )
 
 var allowedEndpoints = map[string]bool{
