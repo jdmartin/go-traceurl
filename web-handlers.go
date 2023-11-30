@@ -10,21 +10,18 @@ import (
 	"net/url"
 	"os"
 	"strings"
-	"time"
 
 	"github.com/microcosm-cc/bluemonday"
 )
 
 // *** Helper Functions ***
 func doTimeout(w http.ResponseWriter, r *http.Request) {
-	thereWasATimeout = true
 	// Set the Content-Type header to "application/json"
 	w.Header().Set("Content-Type", "text/html")
 	http.Redirect(w, r, "/timeout", http.StatusFound)
 }
 
 func doValidationError(w http.ResponseWriter, r *http.Request) {
-	thereWasAValidationError = true
 	// Set the Content-Type header to "application/json"
 	http.Redirect(w, r, "/certerror", http.StatusFound)
 }
@@ -62,22 +59,10 @@ func getStatusCodeClass(statusCode int) string {
 }
 
 // *** Handlers ***
-func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (string, []Hop, error) {
+func followRedirects(client *http.Client, urlStr string, w http.ResponseWriter, r *http.Request) (string, []Hop, bool, error) {
 	// CF didn't break anything yet.
+	var cloudflareStatus bool
 	cloudflareStatus = false
-
-	client := &http.Client{
-		Transport: &http.Transport{
-			ResponseHeaderTimeout: 5 * time.Second,
-		},
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			// Stop following redirects after the first hop
-			if len(via) >= 1 {
-				return http.ErrUseLastResponse
-			}
-			return nil
-		},
-	}
 
 	hops := []Hop{}
 	number := 1
@@ -100,14 +85,14 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 				StatusCode:      http.StatusLoopDetected,
 				StatusCodeClass: getStatusCodeClass(http.StatusLoopDetected),
 			})
-			return urlStr, hops, nil
+			return urlStr, hops, cloudflareStatus, nil
 		} else {
 			visitedURLs[urlStr]++
 		}
 
 		req, err := http.NewRequest("GET", urlStr, nil)
 		if err != nil {
-			return "", nil, fmt.Errorf("error creating request: %s", err)
+			return "", nil, cloudflareStatus, fmt.Errorf("error creating request: %s", err)
 		}
 
 		// Set the user agent header
@@ -117,15 +102,15 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 		if err != nil {
 			if err, ok := err.(*url.Error); ok && err.Timeout() {
 				doTimeout(w, r)
-				return "", nil, nil
+				return "", nil, cloudflareStatus, nil
 			}
 
 			if strings.Contains(err.Error(), "x509: certificate signed by unknown authority") {
 				// Handle certificate verification error
 				doValidationError(w, r)
-				return "", nil, nil
+				return "", nil, cloudflareStatus, nil
 			}
-			return "", nil, fmt.Errorf("error accessing URL: %s", err)
+			return "", nil, cloudflareStatus, fmt.Errorf("error accessing URL: %s", err)
 		}
 		defer resp.Body.Close()
 
@@ -143,7 +128,7 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 				if strings.Contains(resp.Header.Get("Server"), "cloudflare") {
 					cloudflareStatus = true
 				}
-				return "", []Hop{}, nil // Return empty slice of Hop when redirect location is not found
+				return "", []Hop{}, cloudflareStatus, nil // Return empty slice of Hop when redirect location is not found
 			}
 			if strings.HasPrefix(location, "https://outlook.office365.com") {
 				// Only include the final request as the last hop
@@ -155,12 +140,12 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 				finalHop.StatusCodeClass = getStatusCodeClass(http.StatusOK)
 				hops = append(hops, finalHop)
 
-				return location, hops, nil
+				return location, hops, cloudflareStatus, nil
 			}
 
 			redirectURL, err := handleRelativeRedirect(previousURL, location, req.URL)
 			if err != nil {
-				return "", nil, fmt.Errorf("error handling relative redirect: %s", err)
+				return "", nil, cloudflareStatus, fmt.Errorf("error handling relative redirect: %s", err)
 			}
 
 			// Convert redirectURL to a string
@@ -169,13 +154,13 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 			// Check if the "returnUri" query parameter is present
 			u, err := url.Parse(redirectURLString)
 			if err != nil {
-				return "", nil, fmt.Errorf("error parsing URL: %s", err)
+				return "", nil, cloudflareStatus, fmt.Errorf("error parsing URL: %s", err)
 			}
 			queryParams := u.Query()
 			if returnURI := queryParams.Get("returnUri"); returnURI != "" {
 				decodedReturnURI, err := url.PathUnescape(returnURI)
 				if err != nil {
-					return "", nil, fmt.Errorf("error decoding returnUri: %s", err)
+					return "", nil, cloudflareStatus, fmt.Errorf("error decoding returnUri: %s", err)
 				}
 				decodedReturnURI = strings.ReplaceAll(decodedReturnURI, "%3A", ":")
 				decodedReturnURI = strings.ReplaceAll(decodedReturnURI, "%2F", "/")
@@ -186,7 +171,7 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 			if redirURI := queryParams.Get("redir"); redirURI != "" {
 				decodedRedirURI, err := url.PathUnescape(redirURI)
 				if err != nil {
-					return "", nil, fmt.Errorf("error decoding redir param: %s", err)
+					return "", nil, cloudflareStatus, fmt.Errorf("error decoding redir param: %s", err)
 				}
 				decodedRedirURI = strings.ReplaceAll(decodedRedirURI, "%3A", ":")
 				decodedRedirURI = strings.ReplaceAll(decodedRedirURI, "%2F", "/")
@@ -199,12 +184,12 @@ func followRedirects(urlStr string, w http.ResponseWriter, r *http.Request) (str
 
 			previousURL, err = url.Parse(urlStr)
 			if err != nil {
-				return "", nil, fmt.Errorf("error parsing URL: %s", err)
+				return "", nil, cloudflareStatus, fmt.Errorf("error parsing URL: %s", err)
 			}
 			continue
 		}
 
-		return urlStr, hops, nil
+		return urlStr, hops, cloudflareStatus, nil
 	}
 }
 
@@ -262,12 +247,6 @@ func homeHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 }
 
 func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
-	// No timeouts, yet.
-	thereWasATimeout = false
-
-	// No cert errors, yet.
-	thereWasAValidationError = false
-
 	// Increment the UseCount
 	config.UseCount++
 	fmt.Println("Updated UseCount:", config.UseCount)
@@ -306,7 +285,7 @@ func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 	sanitizedURL := bluemonday.UGCPolicy().Sanitize(rawURL)
 	fixedSanitizedURL := strings.ReplaceAll(sanitizedURL, "&amp;", "&")
 
-	redirectURL, hops, err := followRedirects(fixedSanitizedURL, w, r)
+	redirectURL, hops, cloudflareStatus, err := followRedirects(httpClient, fixedSanitizedURL, w, r)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error following redirects: %s", err), http.StatusInternalServerError)
 		return
@@ -335,7 +314,7 @@ func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 		CloudflareStatus: cloudflareStatus,
 	}
 
-	if !thereWasATimeout && !thereWasAValidationError {
+	if err == nil {
 		resultTemplate.Execute(w, data)
 	}
 }

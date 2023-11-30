@@ -13,15 +13,13 @@ import (
 	"github.com/didip/tollbooth/v7/limiter"
 )
 
-var Version = "2023.11.28.3"
+var Version = "2023.11.29.1"
 
 var (
-	cloudflareStatus         bool
-	formTemplate             *template.Template
-	mode                     string
-	resultTemplate           *template.Template
-	thereWasATimeout         bool
-	thereWasAValidationError bool
+	formTemplate   *template.Template
+	httpClient     = createHTTPClient()
+	mode           string
+	resultTemplate *template.Template
 )
 
 var allowedEndpoints = map[string]bool{
@@ -52,12 +50,31 @@ type Config struct {
 	UseCount int
 }
 
+func createHTTPClient() *http.Client {
+	return &http.Client{
+		Timeout: 8 * time.Second,
+		Transport: &http.Transport{
+			ResponseHeaderTimeout: 5 * time.Second,
+		},
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			// Stop following redirects after the first hop
+			if len(via) >= 1 {
+				return http.ErrUseLastResponse
+			}
+			return nil
+		},
+	}
+}
+
 func main() {
 	// Set counter to zero on startup
 	config := &Config{UseCount: 0}
 
 	// Detect dev or production mode
-	mode = os.Getenv("MODE")
+	mode := os.Getenv("MODE")
+	if mode == "" {
+		mode = "production"
+	}
 
 	// Make sure we have a port to serve on
 	port := os.Getenv("PORT")
