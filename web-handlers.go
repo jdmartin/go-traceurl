@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"html/template"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -106,9 +107,18 @@ func followRedirects(client *http.Client, urlStr string, w http.ResponseWriter, 
 				doValidationError(w, r)
 				return "", nil, cloudflareStatus, nil
 			}
+
+			// Close response body in case of error
+			if resp != nil && resp.Body != nil {
+				resp.Body.Close()
+			}
+
 			return "", nil, cloudflareStatus, fmt.Errorf("error accessing URL: %s", err)
 		}
-		defer resp.Body.Close()
+
+		if resp != nil && resp.Body != nil {
+			defer resp.Body.Close()
+		}
 
 		hop := Hop{
 			Number:     number,
@@ -192,6 +202,7 @@ func followRedirects(client *http.Client, urlStr string, w http.ResponseWriter, 
 func handleRelativeRedirect(previousURL *url.URL, location string, requestURL *url.URL) (*url.URL, error) {
 	redirectURL, err := url.Parse(location)
 	if err != nil {
+		log.Printf("Error parsing redirect URL: %v", err)
 		return nil, err
 	}
 
