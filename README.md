@@ -19,3 +19,7 @@ There are some env variables that can be set:
 - PORT: The port for the tcp server to listen on. Defaults to 8080
 - HOST: The host ip for the tcp server to listen on. Defaults to 127.0.0.1
 - MODE: [Currently in development] 
+
+## Misc
+
+There's a (pretty Alpha) cli version of this tool here: [go-traceurl-cli](https://github.com/jdmartin/go-traceurl-cli)
