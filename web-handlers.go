@@ -16,13 +16,10 @@ import (
 
 // *** Helper Functions ***
 func doTimeout(w http.ResponseWriter, r *http.Request) {
-	// Set the Content-Type header to "application/json"
-	w.Header().Set("Content-Type", "text/html")
 	http.Redirect(w, r, "/timeout", http.StatusFound)
 }
 
 func doValidationError(w http.ResponseWriter, r *http.Request) {
-	// Set the Content-Type header to "application/json"
 	http.Redirect(w, r, "/certerror", http.StatusFound)
 }
 
