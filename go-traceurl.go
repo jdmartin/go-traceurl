@@ -97,14 +97,9 @@ func main() {
 
 	// Create a rate limiter with a limit of 1 requests per second
 	lim := tollbooth.NewLimiter(1, &limiter.ExpirableOptions{
-		DefaultExpirationTTL: time.Hour,
+		DefaultExpirationTTL: time.Second,
 	})
 	lim.SetIPLookups([]string{"RemoteAddr", "X-Forwarded-For", "X-Real-IP"})
-
-	// Set the headers for rate limiting
-	lim.SetTokenBucketExpirationTTL(time.Hour)
-	lim.SetBasicAuthExpirationTTL(time.Hour)
-	lim.SetHeaderEntryExpirationTTL(time.Hour)
 
 	// Handle SIGINT signal
 	handleSIGINT(config, socketPath, serveMode)
@@ -146,7 +141,7 @@ func main() {
 			return
 		}
 		// Handle the request
-		traceHandler(w, r, config)
+		traceHandler(w, r, config, httpClient)
 	})
 
 	// Serve static files using http.FileServer and http.StripPrefix

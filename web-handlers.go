@@ -253,7 +253,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 	}
 }
 
-func traceHandler(w http.ResponseWriter, r *http.Request, config *Config) {
+func traceHandler(w http.ResponseWriter, r *http.Request, config *Config, httpClient *http.Client) {
 	// Increment the UseCount
 	config.UseCount++
 	fmt.Println("Updated UseCount:", config.UseCount)
