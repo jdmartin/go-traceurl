@@ -231,7 +231,7 @@ func handleRelativeRedirect(previousURL *url.URL, location string, requestURL *u
 	return redirectURL, nil
 }
 
-func homeHandler(w http.ResponseWriter, r *http.Request, config *Config) {
+func homeHandler(w http.ResponseWriter, r *http.Request) {
 	nonce, err := GenerateNonce()
 	if err != nil {
 		fmt.Println("Failed to generate nonce:", err)
@@ -244,7 +244,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 			Version  string
 		}{
 			Nonce:    nonce, // Pass the nonce value to the template data
-			UseCount: config.UseCount,
+			UseCount: useCount,
 			Version:  Version,
 		}
 		formTemplate.Execute(w, data)
@@ -253,10 +253,13 @@ func homeHandler(w http.ResponseWriter, r *http.Request, config *Config) {
 	}
 }
 
-func traceHandler(w http.ResponseWriter, r *http.Request, config *Config, httpClient *http.Client) {
-	// Increment the UseCount
-	config.UseCount++
-	fmt.Println("Updated UseCount:", config.UseCount)
+func traceHandler(w http.ResponseWriter, r *http.Request, httpClient *http.Client) {
+	// Increment the useCount
+	useCount++
+	fmt.Println("Updated UseCount:", useCount)
+
+	// Close the HTTP connections when done
+	defer httpClient.CloseIdleConnections()
 
 	nonce, err := GenerateNonce()
 	if err != nil {

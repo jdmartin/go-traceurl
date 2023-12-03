@@ -15,9 +15,15 @@ import (
 
 var (
 	formTemplate   *template.Template
+	host           string
 	httpClient     = createHTTPClient()
+	lim            *limiter.Limiter
+	mode           string
+	port           string
 	resultTemplate *template.Template
-	Version        = "2023.11.30.2"
+	serveMode      string
+	useCount       int
+	Version        = "2023.12.03.1"
 )
 
 var allowedEndpoints = map[string]bool{
@@ -44,9 +50,7 @@ type ResultData struct {
 	Nonce            string
 }
 
-type Config struct {
-	UseCount int
-}
+// Utility and Helper
 
 func createHTTPClient() *http.Client {
 	return &http.Client{
@@ -64,49 +68,105 @@ func createHTTPClient() *http.Client {
 	}
 }
 
-func main() {
+func handleSIGINT(socketPath string, serveMode string) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+
+	go func() {
+		<-c
+		fmt.Println("\nReceived SIGINT. Stopping server...")
+
+		if serveMode == "socket" {
+			// Close the Unix domain socket
+			if l, err := net.Listen("unix", socketPath); err == nil {
+				l.Close()
+			}
+
+			// Remove the Unix domain socket file
+			if err := os.Remove(socketPath); err != nil {
+				fmt.Printf("Error removing socket file: %v\n", err)
+			}
+		}
+
+		os.Exit(0)
+	}()
+}
+
+func parseTemplate(filename string) *template.Template {
+	return template.Must(template.ParseFiles(filename))
+}
+
+// Middleware function to set security headers
+func secureHeaders(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		nonce, err := GenerateNonce()
+		if err != nil {
+			fmt.Println("Failed to generate nonce:", err)
+		}
+
+		w.Header().Set("Content-Security-Policy", fmt.Sprintf("default-src 'self'; script-src 'self' 'nonce-%s'", nonce))
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("X-Frame-Options", "SAMEORIGIN")
+		w.Header().Set("Referrer-Policy", "no-referrer")
+		w.Header().Set("Permissions-Policy", "accelerometer=(), ambient-light-sensor=(), autoplay=(), battery=(), camera=(), cross-origin-isolated=(), display-capture=(), document-domain=(), encrypted-media=(), execution-while-not-rendered=(), execution-while-out-of-viewport=(), fullscreen=(), geolocation=(), gyroscope=(), keyboard-map=(), magnetometer=(), microphone=(), midi=(), navigation-override=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), sync-xhr=(), usb=(), web-share=(), xr-spatial-tracking=()")
+
+		// USE HSTS when in production mode only, because testing.
+		if os.Getenv("MODE") == "production" {
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
+		}
+
+		// Call the next handler
+		next.ServeHTTP(w, r)
+	})
+}
+
+// Init and Main
+
+func init() {
 	// Set counter to zero on startup
-	config := &Config{UseCount: 0}
+	useCount = 0
 
 	// Detect dev or production mode
-	mode := os.Getenv("MODE")
+	mode = os.Getenv("MODE")
 	if mode == "" {
 		mode = "production"
 	}
 
 	// Make sure we have a port to serve on
-	port := os.Getenv("PORT")
+	port = os.Getenv("PORT")
 	if port == "" {
 		port = "8080"
 	}
 
 	// Allow setting of listen address
-	host := os.Getenv("HOST")
+	host = os.Getenv("HOST")
 	if host == "" {
 		host = "127.0.0.1"
 	}
 
 	// Set default serveMode
-	serveMode := os.Getenv("SERVE")
+	serveMode = os.Getenv("SERVE")
 	if serveMode != "tcp" {
 		serveMode = "socket"
 	}
 
-	// Set socket path for listenting
-	socketPath := "/tmp/go-trace.sock"
+	// Define and parse templates.
+	formTemplate = parseTemplate("static/form.html")
+	resultTemplate = parseTemplate("static/result.html")
 
 	// Create a rate limiter with a limit of 1 requests per second
-	lim := tollbooth.NewLimiter(1, &limiter.ExpirableOptions{
+	lim = tollbooth.NewLimiter(1, &limiter.ExpirableOptions{
 		DefaultExpirationTTL: time.Second,
 	})
 	lim.SetIPLookups([]string{"RemoteAddr", "X-Forwarded-For", "X-Real-IP"})
+}
+
+func main() {
+	// Set socket path for listenting
+	socketPath := "/tmp/go-trace.sock"
 
 	// Handle SIGINT signal
-	handleSIGINT(config, socketPath, serveMode)
-
-	// Define templates.
-	formTemplate = template.Must(template.ParseFiles("static/form.html"))
-	resultTemplate = template.Must(template.ParseFiles("static/result.html"))
+	handleSIGINT(socketPath, serveMode)
 
 	// Establish Routes
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
@@ -122,7 +182,7 @@ func main() {
 			return
 		}
 		// Handle the request
-		homeHandler(w, r, config)
+		homeHandler(w, r)
 	})
 
 	http.HandleFunc("/certerror/", func(w http.ResponseWriter, r *http.Request) {
@@ -141,7 +201,7 @@ func main() {
 			return
 		}
 		// Handle the request
-		traceHandler(w, r, config, httpClient)
+		traceHandler(w, r, httpClient)
 	})
 
 	// Serve static files using http.FileServer and http.StripPrefix
@@ -172,52 +232,4 @@ func main() {
 		fmt.Printf("Server listening on http://%s\n", addr)
 		http.ListenAndServe(addr, secureHeaders(http.DefaultServeMux))
 	}
-}
-
-func handleSIGINT(config *Config, socketPath string, serveMode string) {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
-
-	go func() {
-		<-c
-		fmt.Println("\nReceived SIGINT. Stopping server...")
-
-		if serveMode == "socket" {
-			// Close the Unix domain socket
-			if l, err := net.Listen("unix", socketPath); err == nil {
-				l.Close()
-			}
-
-			// Remove the Unix domain socket file
-			if err := os.Remove(socketPath); err != nil {
-				fmt.Printf("Error removing socket file: %v\n", err)
-			}
-		}
-
-		os.Exit(0)
-	}()
-}
-
-// Middleware function to set security headers
-func secureHeaders(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		nonce, err := GenerateNonce()
-		if err != nil {
-			fmt.Println("Failed to generate nonce:", err)
-		}
-
-		w.Header().Set("Content-Security-Policy", fmt.Sprintf("default-src 'self'; script-src 'self' 'nonce-%s'", nonce))
-		w.Header().Set("X-Content-Type-Options", "nosniff")
-		w.Header().Set("X-Frame-Options", "SAMEORIGIN")
-		w.Header().Set("Referrer-Policy", "no-referrer")
-		w.Header().Set("Permissions-Policy", "accelerometer=(), ambient-light-sensor=(), autoplay=(), battery=(), camera=(), cross-origin-isolated=(), display-capture=(), document-domain=(), encrypted-media=(), execution-while-not-rendered=(), execution-while-out-of-viewport=(), fullscreen=(), geolocation=(), gyroscope=(), keyboard-map=(), magnetometer=(), microphone=(), midi=(), navigation-override=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), sync-xhr=(), usb=(), web-share=(), xr-spatial-tracking=()")
-
-		// USE HSTS when in production mode only, because testing.
-		if os.Getenv("MODE") == "production" {
-			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload")
-		}
-
-		// Call the next handler
-		next.ServeHTTP(w, r)
-	})
 }
