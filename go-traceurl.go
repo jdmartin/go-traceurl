@@ -23,7 +23,7 @@ var (
 	resultTemplate *template.Template
 	serveMode      string
 	useCount       int
-	Version        = "2023.12.03.1"
+	Version        = "2023.12.05.1"
 )
 
 var allowedEndpoints = map[string]bool{
