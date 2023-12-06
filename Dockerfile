@@ -1,6 +1,6 @@
 FROM cgr.dev/chainguard/go:latest as build
 
-#Build 28 Nov 2023
+#Build 05 Dec 2023
 
 RUN mkdir /
 WORKDIR /
