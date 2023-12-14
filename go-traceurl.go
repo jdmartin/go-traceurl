@@ -11,6 +11,7 @@ import (
 
 	"github.com/didip/tollbooth/v7"
 	"github.com/didip/tollbooth/v7/limiter"
+	"github.com/microcosm-cc/bluemonday"
 )
 
 var (
@@ -23,7 +24,8 @@ var (
 	resultTemplate *template.Template
 	serveMode      string
 	useCount       int
-	Version        = "2023.12.05.1"
+	ugcPolicy      = bluemonday.UGCPolicy()
+	Version        = "2023.12.13.1"
 )
 
 var allowedEndpoints = map[string]bool{
