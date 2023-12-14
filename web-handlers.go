@@ -11,8 +11,6 @@ import (
 	"net/url"
 	"os"
 	"strings"
-
-	"github.com/microcosm-cc/bluemonday"
 )
 
 // *** Helper Functions ***
@@ -30,13 +28,12 @@ func GenerateNonce() (string, error) {
 
 	// Generate random bytes for the nonce
 	nonceBytes := make([]byte, nonceLength)
-	_, err := rand.Read(nonceBytes)
-	if err != nil {
+	if _, err := rand.Read(nonceBytes); err != nil {
 		return "", err
 	}
 
 	// Encode the random bytes as a base64 string
-	nonce := base64.StdEncoding.EncodeToString(nonceBytes)
+	nonce := base64.RawURLEncoding.EncodeToString(nonceBytes)
 
 	return nonce, nil
 }
@@ -56,19 +53,30 @@ func getStatusCodeClass(statusCode int) string {
 	}
 }
 
+func partialDecode(url *string) {
+	//This function exists to handle these two specific character replacements.
+	//Largely, this is because requests can go funny when these are encoded.
+	*url = strings.ReplaceAll(*url, "%3A", ":")
+	*url = strings.ReplaceAll(*url, "%2F", "/")
+}
+
+func sanitizeURL(url *string) {
+	// Sanitize URL input using bluemonday
+	// Fix ampersands in final output because, again, things can go awry.
+	*url = ugcPolicy.Sanitize(*url)
+	*url = strings.ReplaceAll(*url, "&amp;", "&")
+}
+
 // *** Handlers ***
 func followRedirects(client *http.Client, urlStr string, w http.ResponseWriter, r *http.Request) (string, []Hop, bool, error) {
-	// CF didn't break anything yet.
-	var cloudflareStatus bool // Defaults to false
+	var cloudflareStatus bool // CF didn't break anything yet, so defaults to false
+	var previousURL *url.URL
 
 	hops := []Hop{}
 	number := 1
 
-	var previousURL *url.URL
-
 	// Use a set to keep track of visited URLs
 	visitedURLs := make(map[string]int)
-
 	// Ensure the initial URL is marked as visited
 	visitedURLs[urlStr] = 1
 
@@ -168,9 +176,7 @@ func followRedirects(client *http.Client, urlStr string, w http.ResponseWriter, 
 				if err != nil {
 					return "", nil, cloudflareStatus, fmt.Errorf("error decoding returnUri: %s", err)
 				}
-				decodedReturnURI = strings.ReplaceAll(decodedReturnURI, "%3A", ":")
-				decodedReturnURI = strings.ReplaceAll(decodedReturnURI, "%2F", "/")
-
+				partialDecode(&decodedReturnURI)
 				redirectURLString = u.Scheme + "://" + u.Host + u.Path + "?returnUri=" + decodedReturnURI
 			}
 
@@ -179,9 +185,7 @@ func followRedirects(client *http.Client, urlStr string, w http.ResponseWriter, 
 				if err != nil {
 					return "", nil, cloudflareStatus, fmt.Errorf("error decoding redir param: %s", err)
 				}
-				decodedRedirURI = strings.ReplaceAll(decodedRedirURI, "%3A", ":")
-				decodedRedirURI = strings.ReplaceAll(decodedRedirURI, "%2F", "/")
-
+				partialDecode(&decodedRedirURI)
 				redirectURLString = u.Scheme + "://" + u.Host + u.Path + "?redir=" + decodedRedirURI
 			}
 
@@ -266,20 +270,20 @@ func traceHandler(w http.ResponseWriter, r *http.Request, httpClient *http.Clien
 		fmt.Println("Failed to generate nonce:", err)
 	}
 
-	var rawURL string
+	var theURL string
 	if r.Method == "POST" {
-		rawURL = r.FormValue("url")
+		theURL = r.FormValue("url")
 	} else if r.Method == "GET" {
 		token := r.URL.Query().Get("token")
 		if token != "" && token == os.Getenv("GET_TOKEN") {
-			rawURL = r.URL.Query().Get("url")
+			theURL = r.URL.Query().Get("url")
 		}
 	} else {
 		http.Redirect(w, r, "/", http.StatusFound)
 	}
 
 	// Validate the URL format
-	parsedURL, err := url.ParseRequestURI(rawURL)
+	parsedURL, err := url.ParseRequestURI(theURL)
 	if err != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") || parsedURL.Host == "" || !parsedURL.IsAbs() {
 		http.Error(w, "Invalid URL format", http.StatusBadRequest)
 		return
@@ -291,11 +295,9 @@ func traceHandler(w http.ResponseWriter, r *http.Request, httpClient *http.Clien
 		return
 	}
 
-	// Sanitize URL input using bluemonday
-	sanitizedURL := bluemonday.UGCPolicy().Sanitize(rawURL)
-	fixedSanitizedURL := strings.ReplaceAll(sanitizedURL, "&amp;", "&")
-
-	redirectURL, hops, cloudflareStatus, err := followRedirects(httpClient, fixedSanitizedURL, w, r)
+	//Sanitize that URL before proceeding.
+	sanitizeURL(&theURL)
+	redirectURL, hops, cloudflareStatus, err := followRedirects(httpClient, theURL, w, r)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error following redirects: %s", err), http.StatusInternalServerError)
 		return
@@ -311,7 +313,7 @@ func traceHandler(w http.ResponseWriter, r *http.Request, httpClient *http.Clien
 	} else {
 		finalStatusCode = http.StatusInternalServerError
 		finalMessage = "Redirect Location Not Provided By Headers"
-		hops = append(hops, Hop{Number: 1, URL: rawURL, StatusCode: finalStatusCode, StatusCodeClass: getStatusCodeClass(finalStatusCode)})
+		hops = append(hops, Hop{Number: 1, URL: theURL, StatusCode: finalStatusCode, StatusCodeClass: getStatusCodeClass(finalStatusCode)})
 	}
 
 	data := ResultData{
