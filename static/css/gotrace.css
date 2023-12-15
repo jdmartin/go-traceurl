@@ -45,6 +45,12 @@ form {
   display: inline-flex;
 }
 
+.source-link {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+}
+
 #urlInput {
   padding: 10px;
   margin-right: 10px;

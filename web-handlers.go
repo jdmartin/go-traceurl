@@ -243,13 +243,15 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 
 	if r.Method == "GET" {
 		data := struct {
-			Nonce    string
-			UseCount int
-			Version  string
+			Nonce          string
+			ShowSourceLink bool
+			UseCount       int
+			Version        string
 		}{
-			Nonce:    nonce, // Pass the nonce value to the template data
-			UseCount: useCount,
-			Version:  Version,
+			Nonce:          nonce, // Pass the nonce value to the template data
+			ShowSourceLink: showSourceLink,
+			UseCount:       useCount,
+			Version:        Version,
 		}
 		formTemplate.Execute(w, data)
 	} else {

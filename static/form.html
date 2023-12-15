@@ -18,6 +18,11 @@
 			<span id="antiqueCounter">Version: {{ .Version }}</span>
 		</div>
 	</div>
+	{{ if .ShowSourceLink }}
+	<div>
+		<div class="source-link"><a href="https://github.com/jdmartin/go-traceurl" target="_blank"><img src="/static/images/github-mark.png" height="30px" width="30px"></a></div>
+	</div>
+	{{ end }}
 	<script src="/static/js/queryHandler.min.js" nonce="{{.Nonce}}"></script>
 </body>
 

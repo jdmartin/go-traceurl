@@ -23,9 +23,10 @@ var (
 	port           string
 	resultTemplate *template.Template
 	serveMode      string
+	showSourceLink = true
 	useCount       int
 	ugcPolicy      = bluemonday.UGCPolicy()
-	Version        = "2023.12.13.1"
+	Version        = "2023.12.15.1"
 )
 
 var allowedEndpoints = map[string]bool{
@@ -209,6 +210,7 @@ func main() {
 	// Serve static files using http.FileServer and http.StripPrefix
 	http.Handle("/static/css/", http.StripPrefix("/static/css/", http.FileServer(http.Dir("static/css"))))
 	http.Handle("/static/data/", http.StripPrefix("/static/data/", http.FileServer(http.Dir("static/data"))))
+	http.Handle("/static/images/", http.StripPrefix("/static/images/", http.FileServer(http.Dir("static/images"))))
 	http.Handle("/static/js/", http.StripPrefix("/static/js/", http.FileServer(http.Dir("static/js"))))
 
 	switch {
