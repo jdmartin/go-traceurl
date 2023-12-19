@@ -60,6 +60,7 @@ window.addEventListener("DOMContentLoaded", () => {
             // List of known bad parts to discard
             const badParts = [
                 "_kx",
+                "bbeml",
                 "cid",
                 "ck_subscriber_id",
                 "cmpid",
@@ -125,7 +126,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
         // Sanitize the newHref using DOMPurify
         const sanitizedHref = DOMPurify.sanitize(newHref);
-        const fixedURL = sanitizedHref.replace(/%3F/g, '?').replace(/%32/g, '#');
+        const fixedURL = sanitizedHref.replace(/%3F/g, '?').replace(/%32/g, '#').replace(/%3D/g, '=');
 
 
         anchorElement.setAttribute("href", fixedURL);
