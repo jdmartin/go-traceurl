@@ -56,8 +56,9 @@ func getStatusCodeClass(statusCode int) string {
 func partialDecode(url *string) {
 	//This function exists to handle these two specific character replacements.
 	//Largely, this is because requests can go funny when these are encoded.
-	*url = strings.ReplaceAll(*url, "%3A", ":")
 	*url = strings.ReplaceAll(*url, "%2F", "/")
+	*url = strings.ReplaceAll(*url, "%3A", ":")
+	*url = strings.ReplaceAll(*url, "%3D", "=")
 }
 
 func sanitizeURL(url *string) {
