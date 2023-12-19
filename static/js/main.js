@@ -60,6 +60,7 @@ window.addEventListener("DOMContentLoaded", () => {
             // List of known bad parts to discard
             const badParts = [
                 "_kx",
+                "bbeml",
                 "cid",
                 "ck_subscriber_id",
                 "cmpid",
