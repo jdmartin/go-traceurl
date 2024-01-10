@@ -171,6 +171,7 @@ func followRedirects(client *http.Client, urlStr string, w http.ResponseWriter, 
 			if err != nil {
 				return "", nil, cloudflareStatus, fmt.Errorf("error parsing URL: %s", err)
 			}
+
 			queryParams := u.Query()
 			if returnURI := queryParams.Get("returnUri"); returnURI != "" {
 				decodedReturnURI, err := url.PathUnescape(returnURI)
