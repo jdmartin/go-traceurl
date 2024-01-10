@@ -26,6 +26,7 @@ window.addEventListener("DOMContentLoaded", () => {
 
             // Split the path into segments
             const segments = path.split(/[?&]/);
+
             // Iterate over the segments
             for (const segment of segments) {
                 if (segment.includes('=')) {
@@ -33,25 +34,27 @@ window.addEventListener("DOMContentLoaded", () => {
                     const [key, value] = segment.split("=");
                     if (key && value) {
                         if (filterTheParams(key)) {
+                            console.log(`Adding to goodParams: ${key}=${value}`);
                             goodParams += `&${key}=${value}`;
+                        } else {
+                            console.log(`Filtering out: ${key}=${value}`);
                         }
                     }
                 } else if (segment.startsWith("#")) {
-                    continue
+                    // Add anchor as needed
+                    additionalText += segment;
                 } else {
                     additionalText += segment;
                 }
-            }
-
-            // Add anchor as needed
-            if (anchor) {
-                additionalText += anchor;
             }
 
             // Let's just make sure the first character in goodParams is a ?
             if (goodParams.slice(1).length > 0) {
                 additionalText += "?" + goodParams.slice(1);
             }
+
+            console.log("Final goodParams:", goodParams);
+            console.log("Final additionalText:", additionalText);
 
             return additionalText;
         }
