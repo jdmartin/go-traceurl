@@ -22,4 +22,4 @@ There are some env variables that can be set:
 
 ## Misc
 
-There's a (pretty Alpha) cli version of this tool here: [go-traceurl-cli](https://github.com/jdmartin/go-traceurl-cli)
+There's a cli version (beta) of this tool here: [go-traceurl-cli](https://github.com/jdmartin/go-traceurl-cli)
