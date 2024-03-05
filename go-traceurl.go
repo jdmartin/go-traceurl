@@ -26,7 +26,7 @@ var (
 	showSourceLink = true
 	useCount       int
 	ugcPolicy      = bluemonday.UGCPolicy()
-	Version        = "2024.02.20.1"
+	Version        = "2024.03.05.1"
 )
 
 var allowedEndpoints = map[string]bool{
