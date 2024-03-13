@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/rand"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"html/template"
@@ -23,19 +22,21 @@ func doValidationError(w http.ResponseWriter, r *http.Request) {
 }
 
 func GenerateNonce() (string, error) {
-	// Define the desired length of the nonce (in bytes)
-	nonceLength := 16
+	const nonceLength = 16 // Length of nonce in bytes
+
+	// Reusable buffer to avoid unnecessary allocations
+	buf := make([]byte, nonceLength)
 
 	// Generate random bytes for the nonce
-	nonceBytes := make([]byte, nonceLength)
-	if _, err := rand.Read(nonceBytes); err != nil {
+	if _, err := rand.Read(buf); err != nil {
 		return "", err
 	}
 
 	// Encode the random bytes as a base64 string
-	nonce := base64.RawURLEncoding.EncodeToString(nonceBytes)
+	nonce := make([]byte, nonceEncoding.EncodedLen(nonceLength))
+	nonceEncoding.Encode(nonce, buf)
 
-	return nonce, nil
+	return string(nonce), nil
 }
 
 func getStatusCodeClass(statusCode int) string {

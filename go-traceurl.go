@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"html/template"
 	"net"
@@ -15,18 +16,21 @@ import (
 )
 
 var (
-	formTemplate   *template.Template
-	host           string
-	httpClient     = createHTTPClient()
-	lim            *limiter.Limiter
+	formTemplate *template.Template
+	host         string
+	httpClient   = createHTTPClient()
+	lim          = tollbooth.NewLimiter(1, &limiter.ExpirableOptions{
+		DefaultExpirationTTL: 3 * time.Second,
+	})
 	mode           string
+	nonceEncoding  = base64.RawURLEncoding
 	port           string
 	resultTemplate *template.Template
 	serveMode      string
 	showSourceLink = true
 	useCount       int
 	ugcPolicy      = bluemonday.UGCPolicy()
-	Version        = "2024.03.05.1"
+	Version        = "2024.03.13.1"
 )
 
 var allowedEndpoints = map[string]bool{
@@ -53,14 +57,26 @@ type ResultData struct {
 	Nonce            string
 }
 
+type CustomTransport struct {
+	*http.Transport
+}
+
+func (ct *CustomTransport) CloseIdleConnections() {
+	// Implement the logic to close idle connections
+	ct.Transport.CloseIdleConnections()
+}
+
 // Utility and Helper
 
 func createHTTPClient() *http.Client {
-	return &http.Client{
-		Timeout: 8 * time.Second,
+	transport := &CustomTransport{
 		Transport: &http.Transport{
 			ResponseHeaderTimeout: 5 * time.Second,
 		},
+	}
+	return &http.Client{
+		Timeout:   8 * time.Second,
+		Transport: transport,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			// Stop following redirects after the first hop
 			if len(via) >= 1 {
@@ -95,8 +111,32 @@ func handleSIGINT(socketPath string, serveMode string) {
 	}()
 }
 
-func parseTemplate(filename string) *template.Template {
-	return template.Must(template.ParseFiles(filename))
+func initLimiter() {
+	lim.SetIPLookups([]string{"RemoteAddr", "X-Forwarded-For", "X-Real-IP"})
+}
+
+func initTemplates() error {
+	var err error
+
+	// Parse form template
+	formTemplate, err = parseTemplate("static/form.html")
+	if err != nil {
+		return fmt.Errorf("failed to parse form template: %v", err)
+	}
+
+	// Parse result template
+	resultTemplate, err = parseTemplate("static/result.html")
+	if err != nil {
+		return fmt.Errorf("failed to parse result template: %v", err)
+	}
+
+	return nil
+}
+
+func parseTemplate(filename string) (*template.Template, error) {
+	// Attempt to parse the template
+	tmpl, err := template.ParseFiles(filename)
+	return tmpl, err
 }
 
 // Middleware function to set security headers
@@ -153,15 +193,14 @@ func init() {
 		serveMode = "socket"
 	}
 
-	// Define and parse templates.
-	formTemplate = parseTemplate("static/form.html")
-	resultTemplate = parseTemplate("static/result.html")
+	// Initialize templates
+	if err := initTemplates(); err != nil {
+		fmt.Printf("Failed to initialize templates: %v\n", err)
+		os.Exit(1)
+	}
 
-	// Create a rate limiter with a limit of 1 requests per second
-	lim = tollbooth.NewLimiter(1, &limiter.ExpirableOptions{
-		DefaultExpirationTTL: time.Second,
-	})
-	lim.SetIPLookups([]string{"RemoteAddr", "X-Forwarded-For", "X-Real-IP"})
+	// Set rate limiter with a limit of 1 requests per second
+	initLimiter()
 }
 
 func main() {
@@ -170,6 +209,12 @@ func main() {
 
 	// Handle SIGINT signal
 	handleSIGINT(socketPath, serveMode)
+
+	// Initialize Templates
+	if err := initTemplates(); err != nil {
+		fmt.Printf("Failed to initialize templates: %v\n", err)
+		os.Exit(1)
+	}
 
 	// Establish Routes
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
