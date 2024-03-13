@@ -330,7 +330,5 @@ func traceHandler(w http.ResponseWriter, r *http.Request, httpClient *http.Clien
 		CloudflareStatus: cloudflareStatus,
 	}
 
-	if err == nil {
-		resultTemplate.Execute(w, data)
-	}
+	resultTemplate.Execute(w, data)
 }
