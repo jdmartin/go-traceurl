@@ -11,5 +11,5 @@ require (
 	github.com/go-pkgz/expirable-cache v1.0.0 // indirect
 	github.com/gorilla/css v1.0.1 // indirect
 	github.com/stretchr/testify v1.8.4 // indirect
-	golang.org/x/net v0.23.0 // indirect
+	golang.org/x/net v0.24.0 // indirect
 )
