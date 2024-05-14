@@ -1,6 +1,6 @@
-FROM cgr.dev/chainguard/go:latest as build
+FROM golang:alpine as build
 
-#Build 06 Feb 2024
+#Build 13 May 2024
 
 RUN mkdir /
 WORKDIR /
