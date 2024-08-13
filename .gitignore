@@ -22,3 +22,6 @@ go.work
 
 #Tests, which may contain sensitive data
 _test.go
+
+taskfile.yaml
+
