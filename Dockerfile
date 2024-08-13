@@ -1,4 +1,4 @@
-FROM golang:alpine as build
+FROM golang:alpine3.20 as build
 
 #Build 13 Aug 2024, take 2
 
