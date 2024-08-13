@@ -1,6 +1,6 @@
-FROM golang:alpine as build
+FROM golang:1.23.0-alpine as build
 
-#Build 07 Aug 2024
+#Build 13 Aug 2024
 
 RUN mkdir /
 WORKDIR /

@@ -1,6 +1,6 @@
 module go-traceurl
 
-go 1.22.6
+go 1.23.0
 
 require github.com/microcosm-cc/bluemonday v1.0.27 // direct
 
