@@ -1,6 +1,6 @@
-FROM golang:latest AS build
+FROM golang:1.23.1 AS build
 
-#Build 5 Sep 2024, take 4
+#Build 5 Sep 2024, take 5
 
 WORKDIR /
 COPY . .
