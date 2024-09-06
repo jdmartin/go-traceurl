@@ -1,6 +1,6 @@
 FROM golang:latest AS build
 
-#Build 5 Sep 2024, take 2
+#Build 5 Sep 2024, take 3
 
 RUN mkdir /
 WORKDIR /
