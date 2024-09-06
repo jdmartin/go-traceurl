@@ -2,7 +2,6 @@ FROM golang:latest AS build
 
 #Build 5 Sep 2024, take 3
 
-RUN mkdir /
 WORKDIR /
 COPY . .
 RUN CGO_ENABLED=0 go build -ldflags="-w -s" -gcflags "all=-N -l" -tags netgo -o main .
