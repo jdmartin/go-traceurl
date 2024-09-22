@@ -72,6 +72,9 @@ func createHTTPClient() *http.Client {
 	transport := &CustomTransport{
 		Transport: &http.Transport{
 			ResponseHeaderTimeout: 5 * time.Second,
+			MaxIdleConns:          2,                // Maximum idle connections across all hosts
+			IdleConnTimeout:       90 * time.Second, // Keep connections idle for up to 90 seconds
+			TLSHandshakeTimeout:   10 * time.Second, // Limit time spent on the TLS handshake
 		},
 	}
 	return &http.Client{
