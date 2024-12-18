@@ -13,7 +13,7 @@ install-deps: update-deps
 	go mod tidy
 
 # Task: Updates the dependencies
-update-deps:
+update-deps: update-go-version
 	go get -u ./...
 
 # Task: Default task, installs dependencies and builds the app (darwin/arm64)
