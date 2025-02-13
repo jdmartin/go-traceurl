@@ -68,7 +68,7 @@ jobs:
         with:
           context: .
           platforms: linux/amd64,linux/arm64
-          provenance: false
+          provenance: min
           sbom: true
           push: ${{ github.event_name != 'pull_request' }}
           tags: songsthatsaved/go-traceurl:latest
