@@ -1,6 +1,6 @@
 FROM golang:alpine AS build
 
-#Build 12 Feb 2025
+#Build 12 Feb 2025, v2
 
 WORKDIR /
 COPY . .
