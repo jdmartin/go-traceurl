@@ -69,6 +69,7 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           provenance: false
+          sbom: true
           push: ${{ github.event_name != 'pull_request' }}
           tags: songsthatsaved/go-traceurl:latest
           labels: ${{ steps.meta.outputs.labels }}
