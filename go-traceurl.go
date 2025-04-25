@@ -213,12 +213,6 @@ func main() {
 	// Handle SIGINT signal
 	handleSIGINT(socketPath, serveMode)
 
-	// Initialize Templates
-	if err := initTemplates(); err != nil {
-		fmt.Printf("Failed to initialize templates: %v\n", err)
-		os.Exit(1)
-	}
-
 	// Establish Routes
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		// Check if the requested endpoint is allowed
