@@ -61,11 +61,6 @@ type CustomTransport struct {
 	*http.Transport
 }
 
-func (ct *CustomTransport) CloseIdleConnections() {
-	// Implement the logic to close idle connections
-	ct.Transport.CloseIdleConnections()
-}
-
 // Utility and Helper
 
 func createHTTPClient() *http.Client {
