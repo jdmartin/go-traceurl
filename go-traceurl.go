@@ -113,6 +113,16 @@ func initLimiter() {
 	lim.SetIPLookups([]string{"RemoteAddr", "X-Forwarded-For", "X-Real-IP"})
 }
 
+func wrapWithLimiter(h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if httpError := tollbooth.LimitByRequest(lim, w, r); httpError != nil {
+			http.Error(w, httpError.Message, httpError.StatusCode)
+			return
+		}
+		h(w, r)
+	}
+}
+
 func initTemplates() error {
 	var err error
 
@@ -209,40 +219,28 @@ func main() {
 	handleSIGINT(socketPath, serveMode)
 
 	// Establish Routes
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/", wrapWithLimiter(func(w http.ResponseWriter, r *http.Request) {
 		// Check if the requested endpoint is allowed
 		if _, ok := allowedEndpoints[r.URL.Path]; !ok {
 			http.NotFound(w, r)
 			return
 		}
-		// Limit the request using the rate limiter
-		httpError := tollbooth.LimitByRequest(lim, w, r)
-		if httpError != nil {
-			http.Error(w, httpError.Message, httpError.StatusCode)
-			return
-		}
 		// Handle the request
 		homeHandler(w, r)
-	})
+	}))
 
-	http.HandleFunc("/certerror/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/certerror/", wrapWithLimiter(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "static/certerror.html")
-	})
+	}))
 
-	http.HandleFunc("/timeout/", func(w http.ResponseWriter, r *http.Request) {
+	http.HandleFunc("/timeout/", wrapWithLimiter(func(w http.ResponseWriter, r *http.Request) {
 		http.ServeFile(w, r, "static/timeout.html")
-	})
+	}))
 
-	http.HandleFunc("/trace", func(w http.ResponseWriter, r *http.Request) {
-		// Limit the request using the rate limiter
-		httpError := tollbooth.LimitByRequest(lim, w, r)
-		if httpError != nil {
-			http.Error(w, httpError.Message, httpError.StatusCode)
-			return
-		}
+	http.HandleFunc("/trace", wrapWithLimiter(func(w http.ResponseWriter, r *http.Request) {
 		// Handle the request
 		traceHandler(w, r, httpClient)
-	})
+	}))
 
 	// Serve static files using http.FileServer and http.StripPrefix
 	http.Handle("/static/css/", http.StripPrefix("/static/css/", http.FileServer(http.Dir("static/css"))))
