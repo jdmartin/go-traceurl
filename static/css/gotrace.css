@@ -69,6 +69,10 @@ form {
   font-family: et-book, Palatino, palatino linotype, palatino lt std, book antiqua, Georgia, serif;
 }
 
+.form-container .teapot {
+  display: none !important;
+}
+
 .form-container input[type="text"],
 .form-container input[type="submit"] {
   width: 100%;

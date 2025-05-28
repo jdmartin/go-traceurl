@@ -263,6 +263,13 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func traceHandler(w http.ResponseWriter, r *http.Request, httpClient *http.Client) {
+	// Honeypot trap
+	if r.Method == "POST" && r.FormValue("email_confirm") != "" {
+		log.Printf("Honeypot triggered by IP: %s", r.RemoteAddr)
+		w.WriteHeader(444) // Use non-standard 444 to silently drop
+		return
+	}
+
 	// Increment the useCount
 	useCount++
 	fmt.Println("Updated UseCount:", useCount)

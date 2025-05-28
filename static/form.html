@@ -13,6 +13,12 @@
 			<form id="traceForm" action="/trace" method="post" autocomplete="off">
 				<input type="text" id="urlInput" name="url" placeholder="Enter URL here..." autocorrect="off"
 					autocapitalize="off" spellcheck="false" required>
+				
+				<div class="teapot">
+					<label for="email_confirm">Leave this field empty</label>
+					<input type="text" id="email_confirm" name="email_confirm" autocomplete="off">
+				</div>
+
 				<input type="submit" id="traceButton" value="Trace URL">
 			</form>
 			<span id="antiqueCounter">Version: {{ .Version }}</span>
