@@ -22,7 +22,7 @@ default: install-deps
 
 # Task: Build for Mac (darwin/arm64)
 build-darwin: install-deps
-	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 go build -ldflags="-w -s" -gcflags "all=-N -l" -tags netgo -o $(BUILD_OUTPUT_DARWIN) .
+	CGO_ENABLED=0 GOOS=darwin GOARCH=arm64 GOEXPERIMENT=greenteagc go build -ldflags="-w -s" -gcflags "all=-N -l" -tags netgo -o $(BUILD_OUTPUT_DARWIN) .
 
 # Task: Run locally (using go run) on port tcp/8080
 run-local-test:
