@@ -30,7 +30,7 @@ var (
 	showSourceLink = true
 	useCount       int
 	ugcPolicy      = bluemonday.UGCPolicy()
-	Version        = "2025.11.06.1"
+	Version        = "2025.11.14.1"
 )
 
 var allowedEndpoints = map[string]bool{
@@ -248,8 +248,8 @@ func main() {
 	http.Handle("/static/images/", http.StripPrefix("/static/images/", http.FileServer(http.Dir("static/images"))))
 	http.Handle("/static/js/", http.StripPrefix("/static/js/", http.FileServer(http.Dir("static/js"))))
 
-	switch {
-	case serveMode == "socket":
+	switch serveMode {
+	case "socket":
 		l, err := net.Listen("unix", socketPath)
 		if err != nil {
 			fmt.Printf("Failed to listen on Unix socket: %v\n", err)
@@ -266,7 +266,7 @@ func main() {
 		fmt.Printf("Server listening on Unix socket: %s\n", socketPath)
 		http.Serve(l, secureHeaders(http.DefaultServeMux))
 
-	case serveMode == "tcp":
+	case "tcp":
 		addr := fmt.Sprintf("%s:%s", host, port)
 		fmt.Printf("Server listening on http://%s\n", addr)
 		http.ListenAndServe(addr, secureHeaders(http.DefaultServeMux))

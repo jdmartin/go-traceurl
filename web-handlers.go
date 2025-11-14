@@ -283,14 +283,15 @@ func traceHandler(w http.ResponseWriter, r *http.Request, httpClient *http.Clien
 	}
 
 	var theURL string
-	if r.Method == "POST" {
+	switch r.Method {
+	case "POST":
 		theURL = r.FormValue("url")
-	} else if r.Method == "GET" {
+	case "GET":
 		token := r.URL.Query().Get("token")
 		if token != "" && token == os.Getenv("GET_TOKEN") {
 			theURL = r.URL.Query().Get("url")
 		}
-	} else {
+	default:
 		http.Redirect(w, r, "/", http.StatusFound)
 	}
 
