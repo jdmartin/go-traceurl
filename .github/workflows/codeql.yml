@@ -50,7 +50,7 @@ jobs:
 
       # 🧩 Ensure correct Go version before CodeQL init
       - name: Set up Go
-        uses: actions/setup-go@v6.4.0
+        uses: actions/setup-go@v6.5.0
         with:
           # Option 1: Automatically use the Go version declared in go.mod
           go-version-file: go.mod
