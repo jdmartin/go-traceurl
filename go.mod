@@ -1,6 +1,6 @@
 module go-traceurl
 
-go 1.27.0
+go 1.27.1
 
 require (
 	github.com/didip/tollbooth/v7 v7.0.2
