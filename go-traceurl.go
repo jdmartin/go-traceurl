@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/didip/tollbooth/v7"
@@ -30,7 +31,7 @@ var (
 	showSourceLink = true
 	useCount       int
 	ugcPolicy      = bluemonday.UGCPolicy()
-	Version        = "2026.10.20.1"
+	Version        = "2026.10.21.1"
 )
 
 var allowedEndpoints = map[string]bool{
@@ -85,22 +86,16 @@ func createHTTPClient() *http.Client {
 	}
 }
 
-func handleSIGINT(socketPath string, serveMode string) {
+func handleShutdown(socketPath string, serveMode string) {
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, os.Interrupt)
+	signal.Notify(c, os.Interrupt, syscall.SIGTERM)
 
 	go func() {
-		<-c
-		fmt.Println("\nReceived SIGINT. Stopping server...")
+		sig := <-c
+		fmt.Printf("\nReceived %v. Stopping server...\n", sig)
 
 		if serveMode == "socket" {
-			// Close the Unix domain socket
-			if l, err := net.Listen("unix", socketPath); err == nil {
-				l.Close()
-			}
-
-			// Remove the Unix domain socket file
-			if err := os.Remove(socketPath); err != nil {
+			if err := os.Remove(socketPath); err != nil && !os.IsNotExist(err) {
 				fmt.Printf("Error removing socket file: %v\n", err)
 			}
 		}
@@ -213,10 +208,13 @@ func init() {
 
 func main() {
 	// Set socket path for listenting
-	socketPath := "/tmp/go-trace.sock"
+	socketPath := os.Getenv("SOCKET_PATH")
+	if socketPath == "" {
+		socketPath = "/tmp/go-trace.sock"
+	}
 
-	// Handle SIGINT signal
-	handleSIGINT(socketPath, serveMode)
+	// Handle signals
+	handleShutdown(socketPath, serveMode)
 
 	// Establish Routes
 	http.HandleFunc("/", wrapWithLimiter(func(w http.ResponseWriter, r *http.Request) {
