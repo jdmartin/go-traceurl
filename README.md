@@ -18,6 +18,7 @@ There are some env variables that can be set:
 - SERVE: set to 'tcp' to serve on PORT (see below), or 'socket' to serve on /tmp/go-trace.sock
 - PORT: The port for the tcp server to listen on. Defaults to 8080
 - HOST: The host ip for the tcp server to listen on. Defaults to 127.0.0.1
+- SOCKET_PATH: The location of the unix socket (default /tmp/go-trace.sock) used by SERVE
 - MODE: [Currently in development] 
 
 ## Misc
