@@ -57,17 +57,26 @@
 					<td><span>🧙 <strong>Parameters Removed from Destination URL:</strong> <span
 								id="removed-params"></span></span></td>
 				</tr>
+				{{if ne .Unwrapped ""}}
+				<tr class="result-info">
+					<td></td>
+					<td></td>
+					<td><span>🎁 <strong>Unwrapped Redirect From:</strong> {{.Unwrapped}}</span></td>
+				</tr>
+				{{end}}
 				{{if ne .PreRemoved ""}}
 				<tr class="result-info">
 					<td></td>
 					<td></td>
-					<td><span>✂️ <strong>Removed Before Tracing:</strong> {{.PreRemoved}}<br>
+					<td><span>✂️ <strong>Removed Before Tracing:</strong> {{.PreRemoved}}</span></td>
 				</tr>
-                <tr class="result-info">
-                    <td></td>
-                    <td></td>
-                    <td><strong>Link As Submitted:</strong> {{.OriginalURL}}</span></td>
-                </tr>
+				{{end}}
+				{{if or .Unwrapped .PreRemoved}}
+				<tr class="result-info">
+					<td></td>
+					<td></td>
+					<td><span>📨 <strong>Link As Submitted:</strong> {{.OriginalURL}}</span></td>
+				</tr>
 				{{end}}
 				{{if ne .FinalMessage ""}}
 				<tr class="result-info">

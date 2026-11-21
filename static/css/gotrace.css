@@ -78,6 +78,10 @@ form {
   font-size: smaller;
 }
 
+.form-container .clean-option label {
+  display: block;
+}
+
 .form-container .clean-option input[type="checkbox"] {
   width: auto;
   margin-right: 6px;

@@ -27,6 +27,10 @@
 					<input type="checkbox" id="cleanInput" name="clean" value="1" form="traceForm" checked>
 					Remove tracking parameters before tracing
 				</label>
+				<label for="unwrapInput">
+					<input type="checkbox" id="unwrapInput" name="unwrap" value="1" form="traceForm">
+					Skip known redirect wrappers (Google, Facebook, &hellip;)
+				</label>
 			</div>
 			<span id="antiqueCounter">Version: {{ .Version }}</span>
 		</div>

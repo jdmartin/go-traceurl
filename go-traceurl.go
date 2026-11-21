@@ -31,7 +31,7 @@ var (
 	showSourceLink = true
 	useCount       int
 	ugcPolicy      = bluemonday.UGCPolicy()
-	Version        = "2026.11.10.1"
+	Version        = "2026.11.21.1"
 )
 
 var allowedEndpoints = map[string]bool{
@@ -58,6 +58,7 @@ type ResultData struct {
 	Nonce            string
 	OriginalURL      string // what was submitted, before any pruning
 	PreRemoved       string // params pruned before tracing, comma-separated; "" if none
+	Unwrapped        string // redirect wrappers skipped before tracing, comma-separated; "" if none
 }
 
 type CustomTransport struct {

@@ -258,6 +258,25 @@ func wantsClean(r *http.Request) bool {
 	return true
 }
 
+// wantsUnwrap reports whether known redirect wrappers (google.com/url?q=...,
+// l.facebook.com/l.php?u=..., etc.) should be unwrapped before tracing.
+// Unlike pruning this is OFF unless explicitly requested: a plain checkbox
+// that sends unwrap=1 when checked and nothing at all when it isn't.
+func wantsUnwrap(r *http.Request) bool {
+	if err := r.ParseForm(); err != nil {
+		return false
+	}
+	vals := r.Form["unwrap"]
+	if len(vals) == 0 {
+		return false
+	}
+	switch strings.ToLower(vals[len(vals)-1]) {
+	case "1", "true", "on", "yes":
+		return true
+	}
+	return false
+}
+
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	nonce, err := GenerateNonce()
 	if err != nil {
@@ -313,7 +332,6 @@ func traceHandler(w http.ResponseWriter, r *http.Request, httpClient *http.Clien
 		}
 	default:
 		http.Redirect(w, r, "/", http.StatusFound)
-		return
 	}
 
 	// Validate the URL format
@@ -329,9 +347,25 @@ func traceHandler(w http.ResponseWriter, r *http.Request, httpClient *http.Clien
 		return
 	}
 
+	originalURL := theURL
+
+	// If asked, peel off known redirect wrappers first, so we trace the real
+	// destination without ever contacting the wrapper. The destination gets
+	// the same "not ourselves" check as anything typed into the form.
+	var unwrappedVia []string
+	if wantsUnwrap(r) {
+		theURL, unwrappedVia = unwrapRedirect(theURL)
+		if len(unwrappedVia) > 0 {
+			destURL, err := url.Parse(theURL)
+			if err != nil || strings.Contains(destURL.Host, r.Host) {
+				http.Error(w, "Redirecting to URLs within the same server is not allowed", http.StatusBadRequest)
+				return
+			}
+		}
+	}
+
 	// Prune obvious tracking parameters before we follow anything, unless the
 	// user asked for the raw link. Keep what we removed so we can report it.
-	originalURL := theURL
 	var preRemoved []string
 	if wantsClean(r) {
 		theURL, preRemoved = stripTrackingParams(theURL)
@@ -368,6 +402,7 @@ func traceHandler(w http.ResponseWriter, r *http.Request, httpClient *http.Clien
 		CloudflareStatus: cloudflareStatus,
 		OriginalURL:      originalURL,
 		PreRemoved:       strings.Join(preRemoved, ", "),
+		Unwrapped:        strings.Join(unwrappedVia, ", "),
 	}
 
 	resultTemplate.Execute(w, data)
