@@ -21,6 +21,13 @@
 
 				<input type="submit" id="traceButton" value="Trace URL">
 			</form>
+			<div class="clean-option">
+				<input type="hidden" name="clean" value="0" form="traceForm">
+				<label for="cleanInput">
+					<input type="checkbox" id="cleanInput" name="clean" value="1" form="traceForm" checked>
+					Remove tracking parameters before tracing
+				</label>
+			</div>
 			<span id="antiqueCounter">Version: {{ .Version }}</span>
 		</div>
 	</div>

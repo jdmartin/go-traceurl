@@ -56,6 +56,8 @@ type ResultData struct {
 	StatusCode       int
 	FinalMessage     template.HTML
 	Nonce            string
+	OriginalURL      string // what was submitted, before any pruning
+	PreRemoved       string // params pruned before tracing, comma-separated; "" if none
 }
 
 type CustomTransport struct {

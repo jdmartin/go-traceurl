@@ -57,6 +57,18 @@
 					<td><span>🧙 <strong>Parameters Removed from Destination URL:</strong> <span
 								id="removed-params"></span></span></td>
 				</tr>
+				{{if ne .PreRemoved ""}}
+				<tr class="result-info">
+					<td></td>
+					<td></td>
+					<td><span>✂️ <strong>Removed Before Tracing:</strong> {{.PreRemoved}}<br>
+				</tr>
+                <tr class="result-info">
+                    <td></td>
+                    <td></td>
+                    <td><strong>Link As Submitted:</strong> {{.OriginalURL}}</span></td>
+                </tr>
+				{{end}}
 				{{if ne .FinalMessage ""}}
 				<tr class="result-info">
 					<td></td>

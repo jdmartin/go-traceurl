@@ -238,6 +238,26 @@ func handleRelativeRedirect(previousURL *url.URL, location string, requestURL *u
 	return redirectURL, nil
 }
 
+// wantsClean reports whether tracking parameters should be pruned before the
+// link is traced. Pruning is ON unless the request explicitly says otherwise.
+// The form sends a hidden clean=0 followed by the checkbox's clean=1, so we
+// look at the last value: checked -> "1", unchecked -> "0". Requests that don't
+// mention "clean" at all (scripts, the token-based GET) get the default: on.
+func wantsClean(r *http.Request) bool {
+	if err := r.ParseForm(); err != nil {
+		return true
+	}
+	vals := r.Form["clean"]
+	if len(vals) == 0 {
+		return true
+	}
+	switch strings.ToLower(vals[len(vals)-1]) {
+	case "0", "false", "off", "no":
+		return false
+	}
+	return true
+}
+
 func homeHandler(w http.ResponseWriter, r *http.Request) {
 	nonce, err := GenerateNonce()
 	if err != nil {
@@ -293,6 +313,7 @@ func traceHandler(w http.ResponseWriter, r *http.Request, httpClient *http.Clien
 		}
 	default:
 		http.Redirect(w, r, "/", http.StatusFound)
+		return
 	}
 
 	// Validate the URL format
@@ -306,6 +327,14 @@ func traceHandler(w http.ResponseWriter, r *http.Request, httpClient *http.Clien
 	if strings.Contains(parsedURL.Host, r.Host) {
 		http.Error(w, "Redirecting to URLs within the same server is not allowed", http.StatusBadRequest)
 		return
+	}
+
+	// Prune obvious tracking parameters before we follow anything, unless the
+	// user asked for the raw link. Keep what we removed so we can report it.
+	originalURL := theURL
+	var preRemoved []string
+	if wantsClean(r) {
+		theURL, preRemoved = stripTrackingParams(theURL)
 	}
 
 	//Sanitize that URL before proceeding.
@@ -337,6 +366,8 @@ func traceHandler(w http.ResponseWriter, r *http.Request, httpClient *http.Clien
 		FinalMessage:     template.HTML(finalMessage),
 		Nonce:            nonce,
 		CloudflareStatus: cloudflareStatus,
+		OriginalURL:      originalURL,
+		PreRemoved:       strings.Join(preRemoved, ", "),
 	}
 
 	resultTemplate.Execute(w, data)

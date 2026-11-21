@@ -73,6 +73,16 @@ form {
   display: none !important;
 }
 
+.form-container .clean-option {
+  margin: 4px 0 10px;
+  font-size: smaller;
+}
+
+.form-container .clean-option input[type="checkbox"] {
+  width: auto;
+  margin-right: 6px;
+}
+
 .form-container input[type="text"],
 .form-container input[type="submit"] {
   width: 100%;
