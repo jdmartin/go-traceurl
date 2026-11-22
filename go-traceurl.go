@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
 	"html/template"
@@ -8,6 +9,8 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strings"
+	"sync/atomic"
 	"syscall"
 	"time"
 
@@ -29,7 +32,7 @@ var (
 	resultTemplate *template.Template
 	serveMode      string
 	showSourceLink = true
-	useCount       int
+	useCount       atomic.Int64
 	ugcPolicy      = bluemonday.UGCPolicy()
 	Version        = "2026.11.21.1"
 )
@@ -68,8 +71,26 @@ type CustomTransport struct {
 // Utility and Helper
 
 func createHTTPClient() *http.Client {
+	return newHTTPClient(blockPrivateDial)
+}
+
+// newHTTPClient builds the client used for tracing. control is called for
+// every outgoing connection, after DNS resolution, with the address about to
+// be dialed; returning an error refuses the connection (see safe-dial.go).
+// Production always passes blockPrivateDial; nil allows everything and
+// exists for tests that talk to servers on 127.0.0.1.
+func newHTTPClient(control func(network, address string, c syscall.RawConn) error) *http.Client {
+	dialer := &net.Dialer{
+		Timeout:   5 * time.Second,
+		KeepAlive: 30 * time.Second,
+		Control:   control,
+	}
 	transport := &CustomTransport{
 		Transport: &http.Transport{
+			// Don't set Proxy here. The guard checks the address we actually
+			// dial, which would then be the proxy's, not the destination's.
+			DialContext:           dialer.DialContext,
+			ForceAttemptHTTP2:     true, // a custom DialContext turns this off by default
 			ResponseHeaderTimeout: 5 * time.Second,
 			MaxIdleConns:          2,                // Maximum idle connections across all hosts
 			IdleConnTimeout:       90 * time.Second, // Keep connections idle for up to 90 seconds
@@ -107,8 +128,29 @@ func handleShutdown(socketPath string, serveMode string) {
 	}()
 }
 
+// limiterLookups decides which request fields identify "the client" for rate
+// limiting. Behind a reverse proxy the connection's own address is the proxy
+// (or, on a unix socket, not an IP at all), so every visitor would share one
+// bucket; there we use the rightmost X-Forwarded-For entry, which is the one
+// our proxy appended. That is only safe if the proxy is the sole way in, so
+// the default is on for socket mode and off for tcp. TRUST_PROXY=true/false
+// overrides it.
+func limiterLookups(mode, trustProxyEnv string) []string {
+	trust := mode == "socket"
+	switch strings.ToLower(trustProxyEnv) {
+	case "1", "true", "yes", "on":
+		trust = true
+	case "0", "false", "no", "off":
+		trust = false
+	}
+	if trust {
+		return []string{"X-Forwarded-For", "RemoteAddr"}
+	}
+	return []string{"RemoteAddr"}
+}
+
 func initLimiter() {
-	lim.SetIPLookups([]string{"RemoteAddr", "X-Forwarded-For", "X-Real-IP"})
+	lim.SetIPLookups(limiterLookups(serveMode, os.Getenv("TRUST_PROXY")))
 }
 
 func wrapWithLimiter(h http.HandlerFunc) http.HandlerFunc {
@@ -151,7 +193,12 @@ func secureHeaders(next http.Handler) http.Handler {
 		nonce, err := GenerateNonce()
 		if err != nil {
 			fmt.Println("Failed to generate nonce:", err)
+			http.Error(w, "Internal error", http.StatusInternalServerError)
+			return
 		}
+		// Hand the same nonce to the handlers so the templates' script tags
+		// match the Content-Security-Policy header.
+		r = r.WithContext(context.WithValue(r.Context(), nonceKey, nonce))
 
 		w.Header().Set("Content-Security-Policy", fmt.Sprintf("default-src 'self'; script-src 'self' 'nonce-%s'", nonce))
 		w.Header().Set("X-Content-Type-Options", "nosniff")
@@ -172,9 +219,6 @@ func secureHeaders(next http.Handler) http.Handler {
 // Init and Main
 
 func init() {
-	// Set counter to zero on startup
-	useCount = 0
-
 	// Detect dev or production mode
 	mode = os.Getenv("MODE")
 	if mode == "" {

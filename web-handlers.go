@@ -1,16 +1,143 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
+	"crypto/subtle"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"html/template"
 	"log"
+	"net"
 	"net/http"
 	"net/url"
 	"os"
 	"strings"
+	"time"
 )
+
+// Limits on a single trace.
+const (
+	maxHops           = 20               // redirects followed before we give up
+	totalTraceTimeout = 25 * time.Second // wall-clock budget for the whole chain
+)
+
+type ctxKey int
+
+const nonceKey ctxKey = iota
+
+// Why a trace failed. traceHandler maps these to the user-facing response;
+// the underlying detail only goes to the server log.
+var (
+	errTimeout     = errors.New("timed out")
+	errCertificate = errors.New("certificate verification failed")
+	errUnreachable = errors.New("could not connect") // includes blocked addresses
+	errBadRedirect = errors.New("unusable redirect")
+	errTooManyHops = errors.New("too many redirects")
+)
+
+// traceError carries a failure kind plus enough context to log it usefully
+// without ever showing it to the visitor.
+type traceError struct {
+	Kind error  // one of the err* values above
+	Hop  int    // which hop failed (1-based)
+	Host string // host we were talking to
+	Err  error  // underlying cause (URL stripped); for logs only
+}
+
+func (e *traceError) Error() string {
+	return fmt.Sprintf("hop %d (%s): %v: %v", e.Hop, e.Host, e.Kind, e.Err)
+}
+
+// Unwrap lets errors.Is match both the kind and the underlying cause
+// (for example errBlockedAddress).
+func (e *traceError) Unwrap() []error { return []error{e.Kind, e.Err} }
+
+func newTraceError(kind error, hop int, urlStr string, err error) *traceError {
+	// url.Error repeats the whole URL in its message; keep only the cause.
+	var ue *url.Error
+	if errors.As(err, &ue) {
+		err = ue.Err
+	}
+	host := ""
+	if u, perr := url.Parse(urlStr); perr == nil {
+		host = u.Host
+	}
+	return &traceError{Kind: kind, Hop: hop, Host: host, Err: err}
+}
+
+func classifyFetchError(hop int, urlStr string, err error) *traceError {
+	kind := errUnreachable
+	var ne net.Error
+	var certErr *tls.CertificateVerificationError
+	switch {
+	case errors.As(err, &certErr):
+		kind = errCertificate
+	case errors.Is(err, context.DeadlineExceeded) || (errors.As(err, &ne) && ne.Timeout()):
+		kind = errTimeout
+	}
+	return newTraceError(kind, hop, urlStr, err)
+}
+
+// requestNonce returns the CSP nonce that secureHeaders put on this request,
+// or a fresh one if the handler is called without the middleware (tests).
+func requestNonce(r *http.Request) string {
+	if n, ok := r.Context().Value(nonceKey).(string); ok && n != "" {
+		return n
+	}
+	n, err := GenerateNonce()
+	if err != nil {
+		fmt.Println("Failed to generate nonce:", err)
+	}
+	return n
+}
+
+// checkTarget validates a URL we are about to trace. If it isn't acceptable
+// it writes the error response itself and returns false.
+func checkTarget(w http.ResponseWriter, r *http.Request, rawURL string) bool {
+	u, err := url.ParseRequestURI(rawURL)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") || u.Host == "" || !u.IsAbs() {
+		http.Error(w, "Invalid URL format", http.StatusBadRequest)
+		return false
+	}
+
+	// Check if the URL parameter contains the server name
+	if strings.Contains(u.Host, r.Host) {
+		http.Error(w, "Redirecting to URLs within the same server is not allowed", http.StatusBadRequest)
+		return false
+	}
+
+	// Literal private/loopback/etc. addresses can be refused up front with a
+	// clear message. Hostnames are judged at connect time by the dialer.
+	if !allowPrivateTargets && hostIsBlockedLiteral(u.Hostname()) {
+		http.Error(w, "That address can't be traced.", http.StatusBadRequest)
+		return false
+	}
+	return true
+}
+
+// traceFailure turns a followRedirects error into a response. Everything
+// except the hostname stays in the log: error text from the network layer
+// can contain internal IP addresses, and "blocked" must look the same as
+// "refused" or "no such host" so it can't be used to probe the network.
+func traceFailure(w http.ResponseWriter, r *http.Request, err error) {
+	log.Printf("trace failed: %v", err)
+
+	var te *traceError
+	errors.As(err, &te)
+
+	switch {
+	case errors.Is(err, errTimeout):
+		doTimeout(w, r)
+	case errors.Is(err, errCertificate):
+		doValidationError(w, r)
+	case errors.Is(err, errUnreachable) && te != nil && te.Host != "":
+		http.Error(w, fmt.Sprintf("Couldn't connect to %s.", te.Host), http.StatusBadGateway)
+	default:
+		http.Error(w, "Couldn't follow that link's redirects.", http.StatusBadGateway)
+	}
+}
 
 // *** Helper Functions ***
 func doTimeout(w http.ResponseWriter, r *http.Request) {
@@ -70,7 +197,7 @@ func sanitizeURL(url *string) {
 }
 
 // *** Handlers ***
-func followRedirects(client *http.Client, urlStr string, w http.ResponseWriter, r *http.Request) (string, []Hop, bool, error) {
+func followRedirects(ctx context.Context, client *http.Client, urlStr string) (string, []Hop, bool, error) {
 	var cloudflareStatus bool // CF didn't break anything yet, so defaults to false
 	var previousURL *url.URL
 
@@ -83,6 +210,12 @@ func followRedirects(client *http.Client, urlStr string, w http.ResponseWriter, 
 	visitedURLs[urlStr] = 1
 
 	for {
+		// Hard cap on chain length. Loop detection below only catches chains
+		// that repeat; a server can also just keep inventing new URLs.
+		if number > maxHops {
+			return urlStr, hops, cloudflareStatus, errTooManyHops
+		}
+
 		// Check if the URL has been visited before
 		if visitedURLs[urlStr] > 1 {
 			// Redirect loop detected
@@ -97,9 +230,9 @@ func followRedirects(client *http.Client, urlStr string, w http.ResponseWriter, 
 			visitedURLs[urlStr]++
 		}
 
-		req, err := http.NewRequest("GET", urlStr, nil)
+		req, err := http.NewRequestWithContext(ctx, "GET", urlStr, nil)
 		if err != nil {
-			return "", nil, cloudflareStatus, fmt.Errorf("error creating request: %s", err)
+			return "", hops, cloudflareStatus, newTraceError(errBadRedirect, number, urlStr, err)
 		}
 
 		// Set the user agent header
@@ -107,41 +240,28 @@ func followRedirects(client *http.Client, urlStr string, w http.ResponseWriter, 
 
 		resp, err := client.Do(req)
 		if err != nil {
-			if err, ok := err.(*url.Error); ok && err.Timeout() {
-				doTimeout(w, r)
-				return "", nil, cloudflareStatus, nil
-			}
-
-			if strings.Contains(err.Error(), "x509: certificate signed by unknown authority") {
-				// Handle certificate verification error
-				doValidationError(w, r)
-				return "", nil, cloudflareStatus, nil
-			}
-
-			// Close response body in case of error
-			if resp != nil && resp.Body != nil {
-				resp.Body.Close()
-			}
-
-			return "", nil, cloudflareStatus, fmt.Errorf("error accessing URL: %s", err)
+			return "", hops, cloudflareStatus, classifyFetchError(number, urlStr, err)
 		}
 
-		if resp != nil && resp.Body != nil {
-			defer resp.Body.Close()
-		}
+		// All we need is the status line and a couple of headers. Close right
+		// away: a defer here would hold every hop's connection open until the
+		// whole function returned.
+		statusCode := resp.StatusCode
+		location := resp.Header.Get("Location")
+		serverHeader := resp.Header.Get("Server")
+		resp.Body.Close()
 
 		hop := Hop{
 			Number:     number,
 			URL:        urlStr,
-			StatusCode: resp.StatusCode,
+			StatusCode: statusCode,
 		}
-		hop.StatusCodeClass = getStatusCodeClass(resp.StatusCode)
+		hop.StatusCodeClass = getStatusCodeClass(statusCode)
 		hops = append(hops, hop)
 
-		if resp.StatusCode >= 300 && resp.StatusCode <= 399 {
-			location := resp.Header.Get("Location")
+		if statusCode >= 300 && statusCode <= 399 {
 			if location == "" {
-				if strings.Contains(resp.Header.Get("Server"), "cloudflare") {
+				if strings.Contains(serverHeader, "cloudflare") {
 					cloudflareStatus = true
 				}
 				return "", []Hop{}, cloudflareStatus, nil // Return empty slice of Hop when redirect location is not found
@@ -161,7 +281,7 @@ func followRedirects(client *http.Client, urlStr string, w http.ResponseWriter, 
 
 			redirectURL, err := handleRelativeRedirect(previousURL, location, req.URL)
 			if err != nil {
-				return "", nil, cloudflareStatus, fmt.Errorf("error handling relative redirect: %s", err)
+				return "", hops, cloudflareStatus, newTraceError(errBadRedirect, number, urlStr, err)
 			}
 
 			// Convert redirectURL to a string
@@ -170,14 +290,14 @@ func followRedirects(client *http.Client, urlStr string, w http.ResponseWriter, 
 			// Check if the "returnUri" query parameter is present
 			u, err := url.Parse(redirectURLString)
 			if err != nil {
-				return "", nil, cloudflareStatus, fmt.Errorf("error parsing URL: %s", err)
+				return "", hops, cloudflareStatus, newTraceError(errBadRedirect, number, urlStr, err)
 			}
 
 			queryParams := u.Query()
 			if returnURI := queryParams.Get("returnUri"); returnURI != "" {
 				decodedReturnURI, err := url.PathUnescape(returnURI)
 				if err != nil {
-					return "", nil, cloudflareStatus, fmt.Errorf("error decoding returnUri: %s", err)
+					return "", hops, cloudflareStatus, newTraceError(errBadRedirect, number, urlStr, err)
 				}
 				partialDecode(&decodedReturnURI)
 				redirectURLString = u.Scheme + "://" + u.Host + u.Path + "?returnUri=" + decodedReturnURI
@@ -186,7 +306,7 @@ func followRedirects(client *http.Client, urlStr string, w http.ResponseWriter, 
 			if redirURI := queryParams.Get("redir"); redirURI != "" {
 				decodedRedirURI, err := url.PathUnescape(redirURI)
 				if err != nil {
-					return "", nil, cloudflareStatus, fmt.Errorf("error decoding redir param: %s", err)
+					return "", hops, cloudflareStatus, newTraceError(errBadRedirect, number, urlStr, err)
 				}
 				partialDecode(&decodedRedirURI)
 				redirectURLString = u.Scheme + "://" + u.Host + u.Path + "?redir=" + decodedRedirURI
@@ -197,7 +317,7 @@ func followRedirects(client *http.Client, urlStr string, w http.ResponseWriter, 
 
 			previousURL, err = url.Parse(urlStr)
 			if err != nil {
-				return "", nil, cloudflareStatus, fmt.Errorf("error parsing URL: %s", err)
+				return "", hops, cloudflareStatus, newTraceError(errBadRedirect, number, urlStr, err)
 			}
 			continue
 		}
@@ -278,10 +398,7 @@ func wantsUnwrap(r *http.Request) bool {
 }
 
 func homeHandler(w http.ResponseWriter, r *http.Request) {
-	nonce, err := GenerateNonce()
-	if err != nil {
-		fmt.Println("Failed to generate nonce:", err)
-	}
+	nonce := requestNonce(r)
 
 	if r.Method == "GET" {
 		data := struct {
@@ -292,7 +409,7 @@ func homeHandler(w http.ResponseWriter, r *http.Request) {
 		}{
 			Nonce:          nonce, // Pass the nonce value to the template data
 			ShowSourceLink: showSourceLink,
-			UseCount:       useCount,
+			UseCount:       int(useCount.Load()),
 			Version:        Version,
 		}
 		formTemplate.Execute(w, data)
@@ -310,16 +427,10 @@ func traceHandler(w http.ResponseWriter, r *http.Request, httpClient *http.Clien
 	}
 
 	// Increment the useCount
-	useCount++
-	fmt.Println("Updated UseCount:", useCount)
+	fmt.Println("Updated UseCount:", useCount.Add(1))
 
 	// Close the HTTP connections when done
 	defer httpClient.CloseIdleConnections()
-
-	nonce, err := GenerateNonce()
-	if err != nil {
-		fmt.Println("Failed to generate nonce:", err)
-	}
 
 	var theURL string
 	switch r.Method {
@@ -327,23 +438,17 @@ func traceHandler(w http.ResponseWriter, r *http.Request, httpClient *http.Clien
 		theURL = r.FormValue("url")
 	case "GET":
 		token := r.URL.Query().Get("token")
-		if token != "" && token == os.Getenv("GET_TOKEN") {
+		want := os.Getenv("GET_TOKEN")
+		if token != "" && want != "" && subtle.ConstantTimeCompare([]byte(token), []byte(want)) == 1 {
 			theURL = r.URL.Query().Get("url")
 		}
 	default:
 		http.Redirect(w, r, "/", http.StatusFound)
-	}
-
-	// Validate the URL format
-	parsedURL, err := url.ParseRequestURI(theURL)
-	if err != nil || (parsedURL.Scheme != "http" && parsedURL.Scheme != "https") || parsedURL.Host == "" || !parsedURL.IsAbs() {
-		http.Error(w, "Invalid URL format", http.StatusBadRequest)
 		return
 	}
 
-	// Check if the URL parameter contains the server name
-	if strings.Contains(parsedURL.Host, r.Host) {
-		http.Error(w, "Redirecting to URLs within the same server is not allowed", http.StatusBadRequest)
+	// Validate the URL format, and refuse ourselves and private addresses.
+	if !checkTarget(w, r, theURL) {
 		return
 	}
 
@@ -351,16 +456,12 @@ func traceHandler(w http.ResponseWriter, r *http.Request, httpClient *http.Clien
 
 	// If asked, peel off known redirect wrappers first, so we trace the real
 	// destination without ever contacting the wrapper. The destination gets
-	// the same "not ourselves" check as anything typed into the form.
+	// exactly the same checks as anything typed into the form.
 	var unwrappedVia []string
 	if wantsUnwrap(r) {
 		theURL, unwrappedVia = unwrapRedirect(theURL)
-		if len(unwrappedVia) > 0 {
-			destURL, err := url.Parse(theURL)
-			if err != nil || strings.Contains(destURL.Host, r.Host) {
-				http.Error(w, "Redirecting to URLs within the same server is not allowed", http.StatusBadRequest)
-				return
-			}
+		if len(unwrappedVia) > 0 && !checkTarget(w, r, theURL) {
+			return
 		}
 	}
 
@@ -373,16 +474,26 @@ func traceHandler(w http.ResponseWriter, r *http.Request, httpClient *http.Clien
 
 	//Sanitize that URL before proceeding.
 	sanitizeURL(&theURL)
-	redirectURL, hops, cloudflareStatus, err := followRedirects(httpClient, theURL, w, r)
+
+	// The whole chain gets one deadline, on top of the per-request timeouts.
+	ctx, cancel := context.WithTimeout(r.Context(), totalTraceTimeout)
+	defer cancel()
+
+	var finalMessage string
+	redirectURL, hops, cloudflareStatus, err := followRedirects(ctx, httpClient, theURL)
+	if errors.Is(err, errTooManyHops) && len(hops) > 0 {
+		// Show what we saw, and say why we stopped.
+		finalMessage = fmt.Sprintf("Stopped after %d hops; this link may redirect forever.", maxHops)
+		err = nil
+	}
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error following redirects: %s", err), http.StatusInternalServerError)
+		traceFailure(w, r, err)
 		return
 	}
 
 	lastIndex := len(hops) - 1
 
 	var finalStatusCode int
-	var finalMessage string
 
 	if lastIndex >= 0 {
 		finalStatusCode = hops[lastIndex].StatusCode
@@ -398,7 +509,7 @@ func traceHandler(w http.ResponseWriter, r *http.Request, httpClient *http.Clien
 		LastIndex:        lastIndex,
 		StatusCode:       finalStatusCode,
 		FinalMessage:     template.HTML(finalMessage),
-		Nonce:            nonce,
+		Nonce:            requestNonce(r),
 		CloudflareStatus: cloudflareStatus,
 		OriginalURL:      originalURL,
 		PreRemoved:       strings.Join(preRemoved, ", "),

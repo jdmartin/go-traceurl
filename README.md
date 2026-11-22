@@ -19,6 +19,7 @@ There are some env variables that can be set:
 - PORT: The port for the tcp server to listen on. Defaults to 8080
 - HOST: The host ip for the tcp server to listen on. Defaults to 127.0.0.1
 - SOCKET_PATH: The location of the unix socket (default /tmp/go-trace.sock) used by SERVE
+- TRUST_PROXY: set to 'true' if go-trace sits behind a reverse proxy that appends the client's address to X-Forwarded-For (nginx `$proxy_add_x_forwarded_for`, Caddy, and Traefik all do), so rate limiting is per visitor instead of per proxy. Set to 'false' to always use the connection's own address. Defaults to true when SERVE=socket and false when SERVE=tcp. Only turn it on if the proxy is the only way to reach the app.
 - MODE: [Currently in development] 
 
 ## Misc
